@@ -2,8 +2,9 @@ import { createClient, SupabaseClient, User } from "@supabase/supabase-js";
 import { Inquiry, FormTemplate, FormSubmission, UserProfile } from "../types";
 
 // 환경 변수가 없는 경우 테스트를 위한 기본값 제공
-const supabaseUrl = process.env.REACT_APP_SUPABASE_URL || "https://example.supabase.co";
-const supabaseAnonKey = process.env.REACT_APP_SUPABASE_ANON_KEY || "test-anon-key";
+const supabaseUrl =
+  process.env.REACT_APP_SUPABASE_URL || "https://uspesxpwtedjzmffimyc.supabase.co";
+const supabaseAnonKey = process.env.REACT_APP_SUPABASE_ANON_KEY || "";
 
 export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseAnonKey);
 
