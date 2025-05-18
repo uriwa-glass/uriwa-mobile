@@ -15,6 +15,7 @@ import NetInfo, { NetInfoState } from "@react-native-community/netinfo";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import webViewMessaging, { WebViewMessageHandler } from "../utils/webViewMessaging";
 import authHelper from "../utils/authHelper";
+import nativeFeatures, { NativeFeatureMessage } from "../utils/nativeFeatures";
 import env from "../config/env";
 import { useNavigation } from "@react-navigation/native";
 
@@ -139,9 +140,13 @@ const WebViewContainer: React.FC<WebViewContainerProps> = ({
     true; // 주의: 이 값은 반드시 반환해야 합니다
   `;
 
+  // 네이티브 브릿지 스크립트 추가
+  const nativeBridgeScript = nativeFeatures.getNativeBridgeScript();
+
   // 사용자 정의 JS와 통신 JS 합치기
   const injectedJavaScript = `
     ${communicationScript}
+    ${nativeBridgeScript}
     ${customInjectedJS || ""}
     true; // 주의: 이 값은 반드시 반환해야 합니다
   `;
@@ -202,13 +207,46 @@ const WebViewContainer: React.FC<WebViewContainerProps> = ({
     },
   };
 
+  // 네이티브 기능 메시지 처리
+  const handleNativeFeatureRequest = (event: any) => {
+    try {
+      const data = JSON.parse(event.nativeEvent.data);
+
+      // 네이티브 기능 요청 처리
+      if (
+        data &&
+        ["CAMERA", "LOCATION", "FILE_SYSTEM", "IMAGE_PICKER", "NOTIFICATIONS", "SHARING"].includes(
+          data.type
+        )
+      ) {
+        // 네이티브 기능 요청으로 인식하고 처리
+        nativeFeatures.handleNativeFeatureMessage(
+          data as NativeFeatureMessage,
+          webViewRef as React.RefObject<WebView>
+        );
+        return true;
+      }
+
+      return false;
+    } catch (error) {
+      console.error("Failed to parse native feature request:", error);
+      return false;
+    }
+  };
+
   // 메시지 처리 핸들러
   const handleMessage = (event: any) => {
-    // 기본 메시지 처리
-    const message = webViewMessaging.parseWebViewMessage(event);
+    // 네이티브 기능 요청 처리 시도
+    const isNativeFeatureRequest = handleNativeFeatureRequest(event);
 
-    if (message && messageHandlers[message.type]) {
-      messageHandlers[message.type](message);
+    // 네이티브 기능 요청이 아닌 경우 기본 메시지 처리
+    if (!isNativeFeatureRequest) {
+      // 기본 메시지 처리
+      const message = webViewMessaging.parseWebViewMessage(event);
+
+      if (message && messageHandlers[message.type]) {
+        messageHandlers[message.type](message);
+      }
     }
 
     // 사용자 정의 핸들러 호출
@@ -445,6 +483,10 @@ const WebViewContainer: React.FC<WebViewContainerProps> = ({
         cacheEnabled={cacheEnabled} // 캐싱 설정
         cacheMode="LOAD_CACHE_ELSE_NETWORK" // 안드로이드 캐시 모드
         incognito={false} // 쿠키 및 로컬 스토리지 유지
+        mediaPlaybackRequiresUserAction={false} // 미디어 자동 재생 허용
+        allowsInlineMediaPlayback={true} // 인라인 미디어 재생 허용
+        geolocationEnabled={true} // 지리적 위치 허용
+        allowFileAccess={true} // 파일 접근 허용
         renderLoading={() => (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#0000ff" />

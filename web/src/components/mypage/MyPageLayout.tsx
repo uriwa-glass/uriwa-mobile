@@ -8,13 +8,15 @@ import {
   FiBarChart2,
   FiChevronLeft,
 } from "react-icons/fi";
+import { IconType } from "react-icons";
 import { useUserStore } from "../../stores/userStore";
 import LoadingSpinner from "../common/LoadingSpinner";
+import Icon from "../common/Icon";
 
 interface NavItem {
   path: string;
   name: string;
-  icon: React.ElementType;
+  icon: IconType;
 }
 
 const MyPageLayout = () => {
@@ -73,7 +75,7 @@ const MyPageLayout = () => {
       >
         <div className="flex items-center">
           <Link to="/" className="mr-3">
-            <FiChevronLeft className="w-5 h-5 text-gray-700" />
+            <Icon icon={FiChevronLeft} className="w-5 h-5 text-gray-700" />
           </Link>
           <h1 className="text-xl font-semibold text-gray-800">{getCurrentPageName()}</h1>
         </div>
@@ -161,7 +163,7 @@ const MyPageLayout = () => {
                                           : "text-gray-700 hover:bg-pink-50 hover:text-pink-600"
                                       }`}
                   >
-                    <item.icon className="w-5 h-5 mr-3" />
+                    <Icon icon={item.icon} className="w-5 h-5 mr-3" />
                     <span className="font-medium">{item.name}</span>
                   </Link>
                 </li>

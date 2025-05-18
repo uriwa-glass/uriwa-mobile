@@ -1,7 +1,3 @@
-declare module "react" {
-  interface Attributes {}
-}
-
 // 전역 환경 변수 타입 정의
 interface Window {
   env: {

@@ -6,6 +6,7 @@ import HomeScreen from "../screens/HomeScreen";
 import MyPageScreen from "../screens/MyPageScreen";
 import ScheduleScreen from "../screens/ScheduleScreen";
 import MoreScreen from "../screens/MoreScreen";
+import NativeFeaturesScreen from "../screens/NativeFeaturesScreen";
 import { Ionicons } from "@expo/vector-icons";
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -29,6 +30,8 @@ const MainTabNavigator: React.FC = () => {
             iconName = focused ? "calendar" : "calendar-outline";
           } else if (route.name === "More") {
             iconName = focused ? "menu" : "menu-outline";
+          } else if (route.name === "NativeFeatures") {
+            iconName = focused ? "hardware-chip" : "hardware-chip-outline";
           } else {
             iconName = "help-outline";
           }
@@ -55,6 +58,11 @@ const MainTabNavigator: React.FC = () => {
       <Tab.Screen name="Schedule" component={ScheduleScreen} options={{ title: "수업" }} />
       <Tab.Screen name="MyPage" component={MyPageScreen} options={{ title: "마이페이지" }} />
       <Tab.Screen name="More" component={MoreScreen} options={{ title: "더보기" }} />
+      <Tab.Screen
+        name="NativeFeatures"
+        component={NativeFeaturesScreen}
+        options={{ title: "네이티브 기능" }}
+      />
     </Tab.Navigator>
   );
 };

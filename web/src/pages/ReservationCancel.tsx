@@ -6,7 +6,7 @@ import Layout from "../components/Layout";
 import Button from "../components/Button";
 import { supabase } from "../api/supabaseClient";
 import { checkCancellationPolicy, cancelReservation } from "../api/cancellationService";
-import type { Reservation as ReservationType } from "../types/stores";
+import type { StoreReservation as ReservationType } from "../types/stores";
 
 // 동적 Tailwind 클래스 유틸리티 함수 추가
 function statusClass(type: string) {
@@ -286,6 +286,12 @@ const ReservationCancel = () => {
                 <div className="text-text-secondary">결제 금액</div>
                 <div className="text-text-primary font-bold">
                   {formatPrice(reservation.total_price)}
+                </div>
+              </div>
+              <div className="flex justify-between mb-3 text-md">
+                <div className="text-text-secondary">강사</div>
+                <div className="text-text-primary font-bold">
+                  {reservation.class_schedules.classes.instructors?.[0]?.name || "정보 없음"}
                 </div>
               </div>
             </div>

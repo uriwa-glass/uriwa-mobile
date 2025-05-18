@@ -226,9 +226,8 @@ const CancellationManager = () => {
         const classSchedule = modalState.item as ClassSchedule;
         await cancelClassSchedule(
           classSchedule.id,
-          modalState.reason,
           currentUser.id, // 관리자 ID
-          modalState.notifyUsers
+          modalState.reason
         );
         // Optimistic update or re-fetch
         setUpcomingClasses((prev) => prev.filter((cs) => cs.id !== classSchedule.id));

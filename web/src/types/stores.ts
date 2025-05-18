@@ -61,22 +61,23 @@ export interface ReservationState extends LoadingState {
   selectedSchedule: Schedule | null; // Schedule 타입도 API 모델과 일치하는지 확인 필요
 }
 
-// export interface Reservation { // 기존 스토어 Reservation 정의 삭제 또는 StoreReservation으로 대체
-//   id: string;
-//   user_id: string;
-//   class_id: string;
-//   schedule_id: string;
-//   status: ReservationStatus;
-//   student_count: number;
-//   payment_method: PaymentMethod;
-//   payment_status: PaymentStatus;
-//   created_at: string;
-//   updated_at: string;
-//   total_amount: number;
-//   metadata?: Record<string, any>;
-//   classInfo?: ClassInfo;
-//   scheduleInfo?: Schedule;
-// }
+// 기존 코드 주석 해제
+export interface Reservation {
+  id: string;
+  user_id: string;
+  class_id: string;
+  schedule_id: string;
+  status: ReservationStatus;
+  student_count: number;
+  payment_method: PaymentMethod;
+  payment_status: PaymentStatusType;
+  created_at: string;
+  updated_at: string;
+  total_price: number;
+  metadata?: Record<string, any>;
+  class_schedules?: any;
+  users?: any;
+}
 
 // ReservationStatus, PaymentMethod 는 ./models/reservation 에서 import 하므로 여기서 재정의 안 함
 // UserProfile 은 ./models/user 에서 import 하므로 여기서 재정의 안 함

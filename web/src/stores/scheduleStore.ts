@@ -11,8 +11,12 @@ import {
   getSchedulesAvailability as apiGetSchedules,
   checkScheduleAvailability as apiGetScheduleDetails,
 } from "../api/availabilityService"; // API 함수 임포트
-import { database } from "../../../shared/api/supabaseClient"; // Corrected import for getClasses
-const apiGetClasses = database.getClasses; // Alias for clarity
+import { supabase } from "../api/supabaseClient"; // Import for Supabase client
+
+// API 함수 정의
+const apiGetClasses = async () => {
+  return await supabase.from("classes").select("*");
+};
 
 // import { ClassSchedule } from "../types/models/class"; // Not strictly needed if API services return mapped types or basic types
 

@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import { LoadingState } from "../types/stores";
 import { User, UserProfile } from "../types/models/user";
-import { supabase } from "../../../shared/api/supabaseClient";
+import { supabase } from "../api/supabaseClient";
 
 // UserStore 인터페이스 정의
 interface UserStore extends LoadingState {

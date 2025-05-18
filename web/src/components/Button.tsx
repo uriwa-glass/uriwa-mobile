@@ -1,13 +1,18 @@
-import React, { ButtonHTMLAttributes } from "react";
+import * as React from "react";
 
-export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+export interface ButtonProps {
   variant?: "primary" | "outline" | "text" | "success" | "warning" | "danger";
   size?: "small" | "medium" | "large";
   fullWidth?: boolean;
-  children: React.ReactNode;
+  disabled?: boolean;
+  onClick?: any;
+  className?: string;
+  children?: any;
+  type?: "button" | "submit" | "reset";
+  [key: string]: any; // 추가 속성을 위한 인덱스 시그니처
 }
 
-const Button: React.FC<ButtonProps> = ({
+const Button = ({
   variant = "primary",
   size = "medium",
   fullWidth = false,
@@ -15,8 +20,9 @@ const Button: React.FC<ButtonProps> = ({
   onClick,
   children,
   className = "",
+  type = "button",
   ...props
-}) => {
+}: ButtonProps) => {
   // 기본 클래스
   let baseClasses =
     "flex justify-center items-center font-medium transition-all duration-300 outline-none";
@@ -73,7 +79,7 @@ const Button: React.FC<ButtonProps> = ({
   const buttonClasses = `${baseClasses} ${variantClasses} ${sizeClasses} ${widthClass} ${className}`;
 
   return (
-    <button disabled={disabled} onClick={onClick} className={buttonClasses} {...props}>
+    <button type={type} disabled={disabled} onClick={onClick} className={buttonClasses} {...props}>
       {children}
     </button>
   );

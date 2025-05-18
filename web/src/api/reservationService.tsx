@@ -503,72 +503,9 @@ export const cleanupExpiredReservations = async (): Promise<number> => {
   }
 };
 
-export interface Class {
-  id: string;
-  title: string;
-  description: string;
-  instructor_name: string;
-  category: string;
-  price: number;
-  max_students: number;
-  location: string;
-  image_url: string;
-}
+// 중복 타입 정의 제거 - 이미 상단에서 임포트되어 있음
 
-export interface ClassSchedule {
-  id: string;
-  class_id: string;
-  date: string;
-  duration: number;
-  available_spots: number;
-  classes: Class;
-}
-
-export interface Reservation {
-  id: string;
-  user_id: string;
-  schedule_id: string;
-  student_count: number;
-  status: string;
-  total_price: number;
-  discount_amount: number;
-  created_at: string;
-  updated_at: string;
-  user_name: string;
-  contact_phone: string;
-  class_schedules: ClassSchedule;
-}
-
-export type ReservationWithSchedule = Reservation;
-
-// 사용자별 예약 조회
-export const getUserReservations = async (
-  userId: string,
-  status?: "confirmed" | "cancelled" | "attended" | "no-show"
-): Promise<ReservationWithSchedule[]> => {
-  try {
-    // API 엔드포인트
-    let url = `${API_BASE_URL}/reservations/user/${userId}`;
-
-    // 상태 필터링을 위한 쿼리 파라미터 추가
-    if (status) {
-      url += `?status=${status}`;
-    }
-
-    // API 호출
-    const response = await fetch(url);
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error("예약 내역을 가져오는 중 오류가 발생했습니다:", error);
-    throw error;
-  }
-};
+// 중복 함수 정의 제거 - 이미 266번 줄에 정의되어 있음
 
 // 개별 예약 상세 조회
 export const getUserReservationById = async (

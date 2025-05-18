@@ -1,5 +1,4 @@
-// @ts-ignore
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
 import { getUserActiveSession, getUserSessionHistory } from "../../api/sessionService";
@@ -34,7 +33,7 @@ const MySessions = ({ limit = 10 }: MySessionsProps) => {
         const result = await getUserActiveSession(currentUser.id);
 
         if (result.success) {
-          setActiveSession(result.session);
+          setActiveSession(result.session ?? null);
         } else {
           setError(result.message || "세션 정보를 불러오는 중 오류가 발생했습니다.");
         }

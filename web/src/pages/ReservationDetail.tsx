@@ -175,12 +175,12 @@ const ReservationDetail = () => {
               <div>
                 <h3 className="text-sm font-medium text-text-secondary mb-1">강사</h3>
                 <p className="text-text-primary">
-                  {reservation.class_schedules.classes.instructor_name}
+                  {reservation.class_schedules.classes.instructors?.[0]?.name || "정보 없음"}
                 </p>
               </div>
               <div>
                 <h3 className="text-sm font-medium text-text-secondary mb-1">장소</h3>
-                <p className="text-text-primary">{reservation.class_schedules.classes.location}</p>
+                <p className="text-text-primary">정보 없음</p>
               </div>
               <div>
                 <h3 className="text-sm font-medium text-text-secondary mb-1">예약 인원</h3>
@@ -188,11 +188,11 @@ const ReservationDetail = () => {
               </div>
               <div>
                 <h3 className="text-sm font-medium text-text-secondary mb-1">예약자명</h3>
-                <p className="text-text-primary">{reservation.user_name}</p>
+                <p className="text-text-primary">정보 없음</p>
               </div>
               <div>
                 <h3 className="text-sm font-medium text-text-secondary mb-1">연락처</h3>
-                <p className="text-text-primary">{reservation.contact_phone}</p>
+                <p className="text-text-primary">정보 없음</p>
               </div>
               <div>
                 <h3 className="text-sm font-medium text-text-secondary mb-1">예약일시</h3>
@@ -213,11 +213,11 @@ const ReservationDetail = () => {
                 <span className="text-text-secondary">인원</span>
                 <span className="text-text-primary">{reservation.student_count}명</span>
               </div>
-              {reservation.discount_amount > 0 && (
+              {reservation.total_price > 0 && (reservation as any).discount_amount > 0 && (
                 <div className="flex justify-between py-2">
                   <span className="text-text-secondary">할인금액</span>
                   <span className="text-error-main">
-                    -{formatPrice(reservation.discount_amount)}
+                    -{formatPrice((reservation as any).discount_amount)}
                   </span>
                 </div>
               )}

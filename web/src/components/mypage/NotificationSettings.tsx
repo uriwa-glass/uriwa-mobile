@@ -1,10 +1,10 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useUserStore } from "../../stores/userStore";
 
 const NotificationSettings = () => {
   const { userProfile, currentUser, updateUserProfile } = useUserStore((state) => state);
-  const [isLoading, setIsLoading] = React.useState<boolean>(false);
-  const [notifications, setNotifications] = React.useState({
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [notifications, setNotifications] = useState({
     email_notifications: false,
     push_notifications: false,
     marketing_notifications: false,

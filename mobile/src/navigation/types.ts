@@ -8,6 +8,7 @@ export type MainTabParamList = {
   MyPage: undefined;
   Schedule: undefined;
   More: undefined;
+  NativeFeatures: undefined;
 };
 
 /**

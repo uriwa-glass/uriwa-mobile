@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "../api/supabaseClient";
 import Layout from "../components/Layout";
 import DynamicForm from "../components/DynamicForm";
-import type { FormField, ValidationRule } from "../types/form";
+import type { FormField, ValidationRule, FormTemplate } from "../types/form";
 
 // 타입 정의
 interface InquiryTemplate {
@@ -16,6 +16,9 @@ interface InquiryTemplate {
   notificationEmails: string[];
   createdAt: string;
   updatedAt: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 const DynamicInquiry = () => {
@@ -71,6 +74,9 @@ const DynamicInquiry = () => {
         notificationEmails: data.notification_emails || [],
         createdAt: data.created_at,
         updatedAt: data.updated_at,
+        is_active: data.is_active,
+        created_at: data.created_at,
+        updated_at: data.updated_at,
       });
     } catch (err: any) {
       console.error("Error loading inquiry template:", err);
@@ -172,6 +178,9 @@ const DynamicInquiry = () => {
       notificationEmails: [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
+      is_active: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     });
   };
 
@@ -266,7 +275,14 @@ const DynamicInquiry = () => {
           </p>
         )}
         <DynamicForm
-          template={inquiryTemplate}
+          template={
+            {
+              ...inquiryTemplate,
+              is_active: inquiryTemplate.isActive,
+              created_at: inquiryTemplate.createdAt,
+              updated_at: inquiryTemplate.updatedAt,
+            } as unknown as FormTemplate
+          }
           onSubmit={handleSubmit}
           onCancel={handleCancel}
           isLoading={isSubmitting}
