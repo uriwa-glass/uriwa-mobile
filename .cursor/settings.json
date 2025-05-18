@@ -1,0 +1,8 @@
+{
+  "maxToolCalls": 50,
+  "toolCallTimeoutMs": 30000,
+  "experimentalFeatures": {
+    "enableMultiAgent": true,
+    "verboseLogging": false
+  }
+}
