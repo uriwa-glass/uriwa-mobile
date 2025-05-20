@@ -1,3 +1,8 @@
+/* Tailwind 기본 스타일 및 지시문 */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 /* Tailwind 컴포넌트 및 유틸리티 확장 */
 
 @layer components {
@@ -92,7 +97,7 @@
 
 /* 추가 유틸리티 */
 @layer utilities {
-  .text-ellipsis {
+  .text-truncate {
     @apply overflow-hidden whitespace-nowrap text-ellipsis;
   }
 

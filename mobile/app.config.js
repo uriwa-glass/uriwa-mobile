@@ -52,6 +52,14 @@ export default {
     SUPABASE_URL: process.env.SUPABASE_URL,
     SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
     APP_ENV: process.env.APP_ENV || "development",
+    eas: {
+      projectId: "2ffa82ce-33e4-4a4f-8b43-267e5243373a",
+      owner: "emasion",
+    },
+    GOOGLE_ANDROID_CLIENT_ID:
+      "112158369333-1b7ds3c1fanb3sse20icr1v32gco4i76.apps.googleusercontent.com",
   },
   plugins: ["expo-web-browser"],
+  owner: "emasion",
+  sdkVersion: "53.0.0",
 };

@@ -6,6 +6,8 @@ import MainTabNavigator from "./MainTabNavigator";
 import WebDetailScreen from "../screens/WebDetailScreen";
 import NotFoundScreen from "../screens/NotFoundScreen";
 import LoginScreen from "../screens/LoginScreen";
+import SignupScreen from "../screens/SignupScreen";
+import PasswordResetScreen from "../screens/PasswordResetScreen";
 import { View, ActivityIndicator, StyleSheet, Linking } from "react-native";
 import { useAuth } from "../api";
 import deepLinkHandler from "../utils/deepLinkHandler";
@@ -79,7 +81,11 @@ const RootNavigator: React.FC = () => {
           </>
         ) : (
           // 인증되지 않은 사용자용 화면
-          <Stack.Screen name="Login" component={LoginScreen} />
+          <>
+            <Stack.Screen name="Login" component={LoginScreen} />
+            <Stack.Screen name="Signup" component={SignupScreen} />
+            <Stack.Screen name="PasswordReset" component={PasswordResetScreen} />
+          </>
         )}
 
         {/* 공통 화면 */}

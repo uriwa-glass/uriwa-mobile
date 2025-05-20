@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useEffect, useCallback } from "react";
 import {
   View,
   ActivityIndicator,
@@ -7,6 +7,9 @@ import {
   Platform,
   Alert,
   Text,
+  SafeAreaView,
+  StatusBar,
+  KeyboardAvoidingView,
 } from "react-native";
 import { WebView } from "react-native-webview";
 import { WebViewNavigation, WebViewErrorEvent } from "react-native-webview/lib/WebViewTypes";
@@ -47,6 +50,16 @@ const WebViewContainer: React.FC<WebViewContainerProps> = ({
   const [isOffline, setIsOffline] = useState(false);
   const [cachedContent, setCachedContent] = useState<string | null>(null);
   const navigation = useNavigation();
+
+  // 플랫폼 감지
+  const isIOS = Platform.OS === "ios";
+  const isAndroid = Platform.OS === "android";
+
+  // 안드로이드 하드웨어 가속 설정
+  const androidHardwareAccelerationEnabled = isAndroid;
+
+  // iOS에서 키보드 높이 조정 설정
+  const keyboardVerticalOffset = isIOS ? 88 : 0;
 
   // 전체 URL 구성
   const url = uri || `${env.WEB_URL}${path}`;
@@ -96,6 +109,107 @@ const WebViewContainer: React.FC<WebViewContainerProps> = ({
     }
   }, [isLoading]);
 
+  // iOS 플랫폼 특화 스크립트
+  const iosPlatformScript = isIOS
+    ? `
+    // iOS에서 키보드 입력 시 스크롤 조정 및 기타 최적화
+    (function() {
+      // 폼 요소에 포커스가 갔을 때 스크롤 위치 조정
+      const adjustScrollForInputs = () => {
+        const inputs = document.querySelectorAll('input, textarea, select');
+        inputs.forEach(input => {
+          input.addEventListener('focus', () => {
+            // 입력 요소가 화면 중앙에 오도록 조정
+            setTimeout(() => {
+              const rect = input.getBoundingClientRect();
+              const scrollY = window.scrollY + rect.top - (window.innerHeight / 2);
+              window.scrollTo({ top: scrollY, behavior: 'smooth' });
+            }, 300);
+          });
+        });
+      };
+      
+      // 페이지 로드 시 포커스 조정 함수 등록
+      document.addEventListener('DOMContentLoaded', adjustScrollForInputs);
+      window.addEventListener('load', adjustScrollForInputs);
+      
+      // Safe Area 조정
+      const applySafeArea = () => {
+        const safeAreaStyle = document.createElement('style');
+        safeAreaStyle.innerHTML = \`
+          :root {
+            --safe-area-inset-top: env(safe-area-inset-top);
+            --safe-area-inset-bottom: env(safe-area-inset-bottom);
+            --safe-area-inset-left: env(safe-area-inset-left);
+            --safe-area-inset-right: env(safe-area-inset-right);
+          }
+          body { 
+            padding-top: var(--safe-area-inset-top);
+            padding-bottom: var(--safe-area-inset-bottom);
+            padding-left: var(--safe-area-inset-left);
+            padding-right: var(--safe-area-inset-right);
+          }
+        \`;
+        document.head.appendChild(safeAreaStyle);
+      };
+      
+      // Safe Area 적용
+      applySafeArea();
+    })();
+  `
+    : "";
+
+  // Android 플랫폼 특화 스크립트
+  const androidPlatformScript = isAndroid
+    ? `
+    // Android에서 최적화 및 뒤로가기 버튼 관리
+    (function() {
+      // 뒤로가기 버튼 처리를 위한 이벤트
+      window.addEventListener('message', function(event) {
+        try {
+          const message = JSON.parse(event.data);
+          if (message.type === 'ANDROID_BACK_PRESS') {
+            // 현재 페이지에서 뒤로가기가 필요한 경우 true 반환
+            // 네이티브 앱에서 처리해야 하는 경우 false 반환
+            const canGoBack = window.history.length > 1;
+            window.ReactNativeWebView.postMessage(JSON.stringify({
+              type: 'ANDROID_BACK_PRESS_RESPONSE',
+              payload: { canGoBack: canGoBack }
+            }));
+            
+            if (canGoBack) {
+              window.history.back();
+            }
+          }
+        } catch (e) {
+          console.error('Android back press handler error:', e);
+        }
+      });
+      
+      // 페이지 렌더링 성능 최적화
+      document.addEventListener('DOMContentLoaded', () => {
+        // 이미지 지연 로딩 설정
+        const lazyImages = document.querySelectorAll('img:not([loading])');
+        lazyImages.forEach(img => {
+          img.setAttribute('loading', 'lazy');
+        });
+        
+        // 불필요한 애니메이션 최소화
+        const style = document.createElement('style');
+        style.innerHTML = \`
+          @media (prefers-reduced-motion) {
+            * {
+              animation-duration: 0.001s !important;
+              transition-duration: 0.001s !important;
+            }
+          }
+        \`;
+        document.head.appendChild(style);
+      });
+    })();
+  `
+    : "";
+
   // WebView와 네이티브 앱 간 통신을 위한 JS 코드
   const communicationScript = `
     // 네이티브 앱과 웹 사이의 통신 브릿지 설정
@@ -137,6 +251,49 @@ const WebViewContainer: React.FC<WebViewContainerProps> = ({
     window.nativeAppPlatform = '${Platform.OS}';
     window.nativeAppVersion = '${env.APP_VERSION}';
 
+    // 성능 최적화 및 메모리 관리
+    (function() {
+      // 이미지 최적화
+      const optimizeImages = () => {
+        const images = document.querySelectorAll('img');
+        images.forEach(img => {
+          // 이미지 지연 로딩
+          if (!img.hasAttribute('loading')) {
+            img.setAttribute('loading', 'lazy');
+          }
+          
+          // 스크린 너비에 맞게 이미지 크기 조정 (srcset이 없는 경우)
+          if (!img.hasAttribute('srcset') && img.hasAttribute('src')) {
+            // viewport 기준으로 적절한 크기 설정
+            img.style.maxWidth = '100%';
+            img.style.height = 'auto';
+          }
+        });
+      };
+      
+      // 이벤트 리스너 메모리 누수 방지
+      const cleanupBeforeUnload = () => {
+        window.addEventListener('beforeunload', () => {
+          // 등록된 이벤트 리스너 제거
+          const cleanup = () => {
+            // 일부 이벤트 리스너가 내부 변수에 저장된 경우 접근 불가하므로
+            // 명시적으로 제거 가능한 이벤트만 처리
+            document.querySelectorAll('[data-has-listener]').forEach(el => {
+              el.removeAttribute('data-has-listener');
+              // 특정 이벤트 제거가 필요한 경우 여기 추가
+            });
+          };
+          cleanup();
+        });
+      };
+      
+      // DOM 로드 완료 시 최적화 함수 실행
+      document.addEventListener('DOMContentLoaded', () => {
+        optimizeImages();
+        cleanupBeforeUnload();
+      });
+    })();
+
     true; // 주의: 이 값은 반드시 반환해야 합니다
   `;
 
@@ -147,6 +304,8 @@ const WebViewContainer: React.FC<WebViewContainerProps> = ({
   const injectedJavaScript = `
     ${communicationScript}
     ${nativeBridgeScript}
+    ${iosPlatformScript}
+    ${androidPlatformScript}
     ${customInjectedJS || ""}
     true; // 주의: 이 값은 반드시 반환해야 합니다
   `;
@@ -205,6 +364,11 @@ const WebViewContainer: React.FC<WebViewContainerProps> = ({
     CUSTOM: (message) => {
       console.log("Custom message received:", message);
     },
+    // 안드로이드 뒤로가기 응답 처리
+    ANDROID_BACK_PRESS_RESPONSE: (message) => {
+      // 웹뷰에서 뒤로가기 처리 여부 응답
+      console.log("Android back press response:", message.payload);
+    },
   };
 
   // 네이티브 기능 메시지 처리
@@ -249,256 +413,357 @@ const WebViewContainer: React.FC<WebViewContainerProps> = ({
       }
     }
 
-    // 사용자 정의 핸들러 호출
+    // 사용자 정의 메시지 핸들러 호출
     if (customOnMessage) {
       customOnMessage(event);
     }
   };
 
-  // 페이지 로드 완료 핸들러
+  // 웹뷰 로드 완료 처리
   const handleLoadEnd = () => {
     setIsLoading(false);
 
-    // 페이지 캐싱 (연결된 상태에서만)
-    if (cacheEnabled && !isOffline && webViewRef.current) {
-      webViewRef.current.injectJavaScript(`
+    // 웹 페이지 스크롤 위치 저장 기능 (앱 재진입 시 스크롤 위치 복원)
+    if (webViewRef.current) {
+      const scrollPositionScript = `
         (function() {
-          // 페이지 HTML 캐싱
-          window.ReactNativeWebView.postMessage(JSON.stringify({
-            type: 'CACHE_PAGE',
-            payload: {
-              content: document.documentElement.outerHTML
+          // 스크롤 위치 저장
+          const saveScrollPosition = () => {
+            const scrollPos = { x: window.scrollX, y: window.scrollY };
+            localStorage.setItem('scrollPosition_${url}', JSON.stringify(scrollPos));
+          };
+          
+          // 페이지 이동 시 스크롤 위치 저장
+          window.addEventListener('beforeunload', saveScrollPosition);
+          
+          // 주기적으로 스크롤 위치 저장
+          setInterval(saveScrollPosition, 5000);
+          
+          // 저장된 스크롤 위치 복원
+          const restoreScrollPosition = () => {
+            try {
+              const scrollPos = JSON.parse(localStorage.getItem('scrollPosition_${url}'));
+              if (scrollPos) {
+                window.scrollTo(scrollPos.x, scrollPos.y);
+              }
+            } catch (e) {
+              console.error('Failed to restore scroll position:', e);
             }
-          }));
-          return true;
+          };
+          
+          // 페이지 로드 후 스크롤 위치 복원
+          setTimeout(restoreScrollPosition, 500);
         })();
-      `);
+        true;
+      `;
+      webViewRef.current.injectJavaScript(scrollPositionScript);
     }
   };
 
-  // Android 백 버튼 처리
+  // 안드로이드 뒤로가기 버튼 처리
   useFocusEffect(
-    React.useCallback(() => {
-      const onBackPress = () => {
-        if (webViewRef.current) {
-          webViewRef.current.goBack();
-          return true; // 이벤트 처리 완료
-        }
-        return false; // 기본 뒤로가기 동작 수행
-      };
-
+    useCallback(() => {
+      // 안드로이드에서만 적용
       if (Platform.OS === "android") {
+        const onBackPress = () => {
+          // 웹뷰가 있고 뒤로 갈 수 있는 경우
+          if (webViewRef.current) {
+            // 웹뷰에 안드로이드 뒤로가기 이벤트 전달
+            webViewRef.current.injectJavaScript(`
+              window.postMessage(JSON.stringify({ type: 'ANDROID_BACK_PRESS' }), '*');
+              true;
+            `);
+            return true; // 이벤트 처리됨
+          }
+          return false; // 기본 뒤로가기 동작 허용
+        };
+
+        // 뒤로가기 핸들러 등록
         BackHandler.addEventListener("hardwareBackPress", onBackPress);
+
         return () => {
-          BackHandler.addEventListener("hardwareBackPress", () => false);
+          // 이벤트 리스너 정리
+          BackHandler.removeEventListener("hardwareBackPress", onBackPress);
         };
       }
       return undefined;
     }, [])
   );
 
-  // 에러 핸들러
+  // 웹뷰 오류 처리
   const handleError = (event: WebViewErrorEvent) => {
-    console.error("WebView error:", event.nativeEvent);
-    setIsLoading(false);
+    console.error("WebView error:", event);
 
-    // 에러 메시지 표시 - Alert 대신 화면에 직접 표시
-    Alert.alert(
-      "페이지 로딩 오류",
-      "페이지를 불러오는 중 오류가 발생했습니다. 다시 시도해 주세요.",
-      [{ text: "확인", onPress: () => webViewRef.current?.reload() }]
-    );
+    if (isOffline) {
+      // 오프라인 상태에서 캐시된 콘텐츠가 있는 경우
+      if (cachedContent) {
+        console.log("Using cached content in offline mode");
+        // 웹뷰에 캐시된 콘텐츠 표시
+        if (webViewRef.current) {
+          webViewRef.current.injectJavaScript(`
+            document.open();
+            document.write(\`${cachedContent.replace(/\\/g, "\\\\").replace(/`/g, "\\`")}\`);
+            document.close();
+            true;
+          `);
+        }
+      } else if (offlineHTMLContent) {
+        // 제공된 오프라인 HTML 컨텐츠 표시
+        if (webViewRef.current) {
+          webViewRef.current.injectJavaScript(`
+            document.open();
+            document.write(\`${offlineHTMLContent.replace(/\\/g, "\\\\").replace(/`/g, "\\`")}\`);
+            document.close();
+            true;
+          `);
+        }
+      }
+    }
   };
 
-  // 사용자 에이전트 설정
-  const userAgent = Platform.select({
-    ios: "UriwaAppIOS",
-    android: "UriwaAppAndroid",
-    default: "UriwaApp",
-  });
-
-  // 오프라인 상태 처리
-  if (isOffline) {
-    if (cachedContent) {
-      return (
-        <View style={styles.container}>
-          <WebView
-            originWhitelist={["*"]}
-            source={{ html: cachedContent }}
-            style={styles.webView}
-            renderLoading={() => (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#0000ff" />
-              </View>
-            )}
-          />
-          <View style={styles.offlineBanner}>
-            <Text style={styles.offlineText}>오프라인 모드</Text>
-          </View>
-        </View>
-      );
-    } else if (offlineHTMLContent) {
-      return (
-        <View style={styles.container}>
-          <WebView
-            originWhitelist={["*"]}
-            source={{ html: offlineHTMLContent }}
-            style={styles.webView}
-          />
-          <View style={styles.offlineBanner}>
-            <Text style={styles.offlineText}>오프라인 모드</Text>
-          </View>
-        </View>
-      );
-    } else {
-      return (
-        <View style={styles.offlineContainer}>
-          <Text style={styles.offlineTitle}>인터넷 연결 없음</Text>
-          <Text style={styles.offlineMessage}>인터넷 연결을 확인하고 다시 시도해 주세요.</Text>
-        </View>
-      );
-    }
-  }
-
-  // 오류 발생 시 보여줄 오류 페이지 HTML
+  // HTTP 오류 페이지 HTML 생성
   const getErrorHTML = (message: string) => `
     <!DOCTYPE html>
-    <html>
-      <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <style>
+    <html lang="ko">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+      <title>오류 발생</title>
+      <style>
+        body {
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+          padding: 20px;
+          text-align: center;
+          color: #333;
+          background-color: #f9f9f9;
+          margin: 0;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          align-items: center;
+          height: 100vh;
+        }
+        .error-container {
+          background-color: white;
+          border-radius: 8px;
+          padding: 30px 20px;
+          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+          max-width: 350px;
+          width: 100%;
+        }
+        .error-icon {
+          font-size: 50px;
+          margin-bottom: 20px;
+        }
+        h1 {
+          font-size: 24px;
+          margin-bottom: 15px;
+          font-weight: 600;
+        }
+        p {
+          margin-bottom: 25px;
+          line-height: 1.5;
+          color: #666;
+        }
+        button {
+          background-color: #3498db;
+          color: white;
+          border: none;
+          padding: 12px 20px;
+          border-radius: 4px;
+          font-size: 16px;
+          cursor: pointer;
+          font-weight: 500;
+          width: 100%;
+        }
+        button:active {
+          background-color: #2980b9;
+        }
+        .dark-mode {
+          background-color: #121212;
+          color: #e0e0e0;
+        }
+        .dark-mode .error-container {
+          background-color: #1e1e1e;
+          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+        .dark-mode p {
+          color: #b0b0b0;
+        }
+        .dark-mode button {
+          background-color: #2196f3;
+        }
+        .dark-mode button:active {
+          background-color: #1976d2;
+        }
+        @media (prefers-color-scheme: dark) {
           body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            padding: 20px;
-            text-align: center;
-            background-color: #f9f9f9;
+            background-color: #121212;
+            color: #e0e0e0;
           }
-          .error-icon {
-            font-size: 48px;
-            margin-bottom: 20px;
-            color: #e74c3c;
-          }
-          h1 {
-            color: #333;
-            font-size: 24px;
-            margin-bottom: 10px;
+          .error-container {
+            background-color: #1e1e1e;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
           }
           p {
-            color: #666;
-            margin-bottom: 20px;
+            color: #b0b0b0;
           }
           button {
-            background-color: #3498db;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            font-size: 16px;
-            cursor: pointer;
+            background-color: #2196f3;
           }
-        </style>
-      </head>
-      <body>
+          button:active {
+            background-color: #1976d2;
+          }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="error-container">
         <div class="error-icon">⚠️</div>
         <h1>오류가 발생했습니다</h1>
         <p>${message}</p>
         <button onclick="window.location.reload()">다시 시도</button>
-      </body>
+      </div>
+      <script>
+        // 다크 모드 감지
+        const isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (isDarkMode) {
+          document.body.classList.add('dark-mode');
+        }
+        
+        // 네트워크 상태 확인
+        function checkNetwork() {
+          if (!navigator.onLine) {
+            document.querySelector('p').innerText = '인터넷 연결을 확인해주세요.';
+          }
+        }
+        
+        checkNetwork();
+        window.addEventListener('online', checkNetwork);
+        window.addEventListener('offline', checkNetwork);
+      </script>
+    </body>
     </html>
   `;
 
-  // HTTP 상태 변경 핸들러
+  // HTTP 오류 처리
   const handleHTTPError = (navState: WebViewNavigation) => {
-    if (
-      navState.title === "Error" ||
-      navState.title?.includes("error") ||
-      navState.url?.includes("auth%20session%20missing")
-    ) {
-      // 인증 오류가 발생한 경우 사용자 친화적인 화면 표시
+    const { url, title } = navState;
+
+    // HTTP 오류 코드 확인
+    if (title && /Error\s+(\d+)/i.test(title)) {
+      const errorCode = title.match(/Error\s+(\d+)/i)[1];
+      let errorMessage = "페이지를 불러오는 중 오류가 발생했습니다.";
+
+      switch (errorCode) {
+        case "404":
+          errorMessage = "요청하신 페이지를 찾을 수 없습니다.";
+          break;
+        case "500":
+          errorMessage = "서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
+          break;
+        case "503":
+          errorMessage = "서비스를 일시적으로 사용할 수 없습니다. 잠시 후 다시 시도해주세요.";
+          break;
+        case "403":
+          errorMessage = "이 페이지에 접근할 권한이 없습니다.";
+          break;
+        case "401":
+          errorMessage = "인증이 필요합니다. 로그인 후 다시 시도해주세요.";
+          break;
+        default:
+          errorMessage = `오류가 발생했습니다. (${errorCode})`;
+      }
+
+      // 오류 페이지 표시
       if (webViewRef.current) {
         webViewRef.current.injectJavaScript(`
-          document.body.innerHTML = \`${getErrorHTML(
-            "인증 세션이 없거나 만료되었습니다. 다시 로그인해 주세요."
-          )}\`;
-          true;
-        `);
-
-        // 인증 오류 발생 시 3초 후 로그인 화면으로 이동
-        setTimeout(() => {
-          authHelper.clearAuthToken().then(() => {
-            navigation.navigate("Login" as never);
-          });
-        }, 3000);
-      }
-    }
-
-    // JSON 텍스트가 그대로 표시되는 경우 처리
-    if (
-      navState.title?.includes("{") &&
-      navState.title?.includes("}") &&
-      (navState.title?.includes("error") || navState.title?.includes("message"))
-    ) {
-      if (webViewRef.current) {
-        webViewRef.current.injectJavaScript(`
-          document.body.innerHTML = \`${getErrorHTML(
-            "데이터 형식 오류가 발생했습니다. 다시 시도해 주세요."
-          )}\`;
+          document.open();
+          document.write(\`${getErrorHTML(errorMessage)
+            .replace(/\\/g, "\\\\")
+            .replace(/`/g, "\\`")}\`);
+          document.close();
           true;
         `);
       }
     }
+  };
 
-    // 기존 콜백 함수 호출
+  const handleNavigationStateChange = (navState: WebViewNavigation) => {
+    // HTTP 오류 확인
+    handleHTTPError(navState);
+
+    // 사용자 정의 네비게이션 이벤트 핸들러 호출
     if (onNavigationStateChange) {
       onNavigationStateChange(navState);
     }
   };
 
+  if (isOffline && !cachedContent && !offlineHTMLContent) {
+    // 오프라인 상태에서 캐시된 컨텐츠가 없는 경우 오프라인 화면 표시
+    return (
+      <View style={styles.offlineContainer}>
+        <Text style={styles.offlineTitle}>인터넷 연결 없음</Text>
+        <Text style={styles.offlineMessage}>인터넷 연결을 확인한 후 다시 시도해주세요.</Text>
+      </View>
+    );
+  }
+
+  // 플랫폼별 스타일 적용
+  const webViewContainerStyle = isIOS
+    ? { ...styles.webViewContainer /* iOS 특화 스타일 */ }
+    : isAndroid
+    ? { ...styles.webViewContainer /* Android 특화 스타일 */ }
+    : styles.webViewContainer;
+
   return (
-    <View style={styles.container}>
-      <WebView
-        ref={webViewRef}
-        source={{ uri: url }}
-        style={styles.webView}
-        userAgent={userAgent}
-        onLoadStart={() => setIsLoading(true)}
-        onLoadEnd={handleLoadEnd}
-        onError={handleError}
-        injectedJavaScript={injectedJavaScript}
-        onNavigationStateChange={handleHTTPError}
-        onMessage={handleMessage}
-        javaScriptEnabled={true}
-        domStorageEnabled={true}
-        sharedCookiesEnabled={true}
-        thirdPartyCookiesEnabled={true}
-        startInLoadingState={true}
-        allowsBackForwardNavigationGestures={true} // iOS에서 스와이프 뒤로가기 활성화
-        pullToRefreshEnabled={true} // 당겨서 새로고침 활성화
-        cacheEnabled={cacheEnabled} // 캐싱 설정
-        cacheMode="LOAD_CACHE_ELSE_NETWORK" // 안드로이드 캐시 모드
-        incognito={false} // 쿠키 및 로컬 스토리지 유지
-        mediaPlaybackRequiresUserAction={false} // 미디어 자동 재생 허용
-        allowsInlineMediaPlayback={true} // 인라인 미디어 재생 허용
-        geolocationEnabled={true} // 지리적 위치 허용
-        allowFileAccess={true} // 파일 접근 허용
-        renderLoading={() => (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#0000ff" />
-          </View>
-        )}
-      />
-      {isLoading && (
-        <View style={styles.overlayLoading}>
-          <ActivityIndicator size="large" color="#0000ff" />
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle={isIOS ? "dark-content" : "light-content"} />
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={isIOS ? "padding" : undefined}
+        keyboardVerticalOffset={keyboardVerticalOffset}
+      >
+        <View style={webViewContainerStyle}>
+          <WebView
+            ref={webViewRef}
+            source={{ uri: url }}
+            originWhitelist={["*"]}
+            onLoadEnd={handleLoadEnd}
+            onNavigationStateChange={handleNavigationStateChange}
+            onMessage={handleMessage}
+            onError={handleError}
+            renderLoading={() => (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#3498db" />
+              </View>
+            )}
+            startInLoadingState={true}
+            javaScriptEnabled={true}
+            domStorageEnabled={true}
+            allowsInlineMediaPlayback={true}
+            mediaPlaybackRequiresUserAction={false}
+            injectedJavaScript={injectedJavaScript}
+            cacheEnabled={cacheEnabled}
+            sharedCookiesEnabled={true}
+            thirdPartyCookiesEnabled={true}
+            pullToRefreshEnabled={true}
+            allowsBackForwardNavigationGestures={isIOS}
+            allowFileAccess={true}
+            allowFileAccessFromFileURLs={true}
+            allowUniversalAccessFromFileURLs={true}
+            allowsFullscreenVideo={true}
+            bounces={isIOS}
+            overScrollMode={isAndroid ? "never" : undefined}
+          />
+          {isLoading && (
+            <View style={styles.loadingOverlay}>
+              <ActivityIndicator size="large" color="#3498db" />
+            </View>
+          )}
         </View>
-      )}
-    </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
@@ -507,8 +772,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#fff",
   },
-  webView: {
+  webViewContainer: {
     flex: 1,
+    overflow: "hidden",
   },
   loadingContainer: {
     position: "absolute",
@@ -518,9 +784,9 @@ const styles = StyleSheet.create({
     bottom: 0,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#f5f5f5",
+    backgroundColor: "#fff",
   },
-  overlayLoading: {
+  loadingOverlay: {
     position: "absolute",
     top: 0,
     left: 0,
@@ -528,7 +794,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.8)",
+    backgroundColor: "rgba(255, 255, 255, 0.7)",
   },
   offlineContainer: {
     flex: 1,
@@ -541,20 +807,13 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "bold",
     marginBottom: 10,
+    color: "#333",
   },
   offlineMessage: {
     fontSize: 16,
     textAlign: "center",
     color: "#666",
-  },
-  offlineBanner: {
-    backgroundColor: "#f8d7da",
-    padding: 5,
-    alignItems: "center",
-  },
-  offlineText: {
-    color: "#721c24",
-    fontWeight: "bold",
+    marginBottom: 20,
   },
 });
 

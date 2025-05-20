@@ -3,7 +3,8 @@
  */
 
 // API 엔드포인트
-export const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "https://api.uriwa.com/v1";
+export const API_BASE_URL =
+  process.env.REACT_APP_API_BASE_URL || "https://uspesxpwtedjzmffimyc.supabase.co/rest/v1";
 
 // 페이지네이션 기본 설정
 export const DEFAULT_PAGE_SIZE = 10;

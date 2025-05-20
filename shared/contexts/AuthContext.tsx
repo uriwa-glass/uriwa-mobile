@@ -55,17 +55,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // 초기 상태 로드
     const loadInitialState = async () => {
       try {
-        // 현재 세션 가져오기
-        const {
-          data: { session: currentSession },
-        } = await supabase.auth.getSession();
+        // 현재 사용자 정보 가져오기
+        const { data: userData, error: userError } = await supabase.auth.getUser();
 
-        if (currentSession) {
-          setSession(currentSession);
-          setUser(currentSession.user);
+        if (userError) {
+          console.error("Failed to get user:", userError);
+          return;
+        }
 
-          // 사용자 프로필 가져오기
-          await fetchUserProfile(currentSession.user.id);
+        if (userData?.user) {
+          // 사용자 정보가 있으면 세션 정보도 가져옴
+          const {
+            data: { session: currentSession },
+          } = await supabase.auth.getSession();
+
+          if (currentSession) {
+            setSession(currentSession);
+            setUser(currentSession.user);
+
+            // 사용자 프로필 가져오기
+            await fetchUserProfile(currentSession.user.id);
+          }
         }
       } catch (error) {
         console.error("Failed to load initial auth state:", error);

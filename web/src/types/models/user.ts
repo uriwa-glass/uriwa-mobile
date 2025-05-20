@@ -1,14 +1,8 @@
-import { AuthChangeEvent, Session } from "@supabase/supabase-js";
+import { AuthChangeEvent, Session, User as SupabaseUser } from "@supabase/supabase-js";
 
 // 사용자 기본 타입
-export interface User {
-  id: string;
-  email: string;
-  created_at: string;
-  updated_at: string;
-  last_sign_in_at?: string;
-  app_metadata?: Record<string, any>;
-  user_metadata?: UserMetadata;
+export interface User extends SupabaseUser {
+  // 기존 타입을 Supabase User 타입으로 확장
 }
 
 // 사용자 메타데이터

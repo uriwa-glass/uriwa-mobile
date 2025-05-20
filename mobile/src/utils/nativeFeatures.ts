@@ -1,21 +1,12 @@
 import { Camera } from "expo-camera";
-import * as Location from "expo-location";
-import * as FileSystem from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
 import * as Notifications from "expo-notifications";
 import * as Sharing from "expo-sharing";
-import { Platform } from "react-native";
 import { WebView } from "react-native-webview";
 import { RefObject } from "react";
 
 // 네이티브 기능 타입 정의
-export type NativeFeatureType =
-  | "CAMERA"
-  | "LOCATION"
-  | "FILE_SYSTEM"
-  | "IMAGE_PICKER"
-  | "NOTIFICATIONS"
-  | "SHARING";
+export type NativeFeatureType = "CAMERA" | "IMAGE_PICKER" | "NOTIFICATIONS" | "SHARING";
 
 // 네이티브 기능 메시지 인터페이스
 export interface NativeFeatureMessage {
@@ -43,7 +34,6 @@ export interface PermissionResult {
  */
 export interface NativeFeaturesState {
   camera: PermissionStatus;
-  location: PermissionStatus;
   mediaLibrary: PermissionStatus;
   notifications: PermissionStatus;
 }
@@ -53,17 +43,6 @@ export interface NativeFeaturesState {
  */
 export const requestCameraPermission = async (): Promise<PermissionResult> => {
   const { status } = await Camera.requestCameraPermissionsAsync();
-  return {
-    status: status as PermissionStatus,
-    canAskAgain: status !== "denied",
-  };
-};
-
-/**
- * 위치 권한 요청
- */
-export const requestLocationPermission = async (): Promise<PermissionResult> => {
-  const { status } = await Location.requestForegroundPermissionsAsync();
   return {
     status: status as PermissionStatus,
     canAskAgain: status !== "denied",
@@ -90,38 +69,6 @@ export const requestNotificationsPermission = async (): Promise<PermissionResult
     status: status as PermissionStatus,
     canAskAgain: status !== "denied",
   };
-};
-
-/**
- * 현재 위치 정보 가져오기
- */
-export const getCurrentLocation = async () => {
-  try {
-    const permissionResult = await requestLocationPermission();
-    if (permissionResult.status !== "granted") {
-      throw new Error("Location permission not granted");
-    }
-
-    const location = await Location.getCurrentPositionAsync({
-      accuracy: Location.Accuracy.High,
-    });
-
-    return {
-      success: true,
-      data: {
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-        accuracy: location.coords.accuracy,
-        altitude: location.coords.altitude,
-        timestamp: location.timestamp,
-      },
-    };
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    };
-  }
 };
 
 /**
@@ -205,46 +152,6 @@ export const takePicture = async (options?: ImagePicker.ImagePickerOptions) => {
     return {
       success: false,
       error: "Image capture canceled",
-    };
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    };
-  }
-};
-
-/**
- * 파일 저장
- */
-export const saveFile = async (fileUri: string, fileName: string) => {
-  try {
-    // 파일 저장 경로 생성
-    const directory = `${FileSystem.documentDirectory}downloads/`;
-    const dirInfo = await FileSystem.getInfoAsync(directory);
-
-    // 디렉토리가 없으면 생성
-    if (!dirInfo.exists) {
-      await FileSystem.makeDirectoryAsync(directory, { intermediates: true });
-    }
-
-    const destUri = `${directory}${fileName}`;
-
-    // 파일 복사
-    await FileSystem.copyAsync({
-      from: fileUri,
-      to: destUri,
-    });
-
-    // 공유 가능 여부 확인
-    const canShare = await Sharing.isAvailableAsync();
-
-    return {
-      success: true,
-      data: {
-        uri: destUri,
-        canShare,
-      },
     };
   } catch (error) {
     return {
@@ -395,12 +302,6 @@ export const handleNativeFeatureMessage = async (
     let response;
 
     switch (type) {
-      case "LOCATION":
-        if (action === "GET_CURRENT") {
-          response = await getCurrentLocation();
-        }
-        break;
-
       case "CAMERA":
         if (action === "TAKE_PICTURE") {
           response = await takePicture(payload);
@@ -410,15 +311,6 @@ export const handleNativeFeatureMessage = async (
       case "IMAGE_PICKER":
         if (action === "PICK_IMAGE") {
           response = await pickImage(payload);
-        }
-        break;
-
-      case "FILE_SYSTEM":
-        if (action === "SAVE_FILE") {
-          const { uri, fileName } = payload;
-          response = await saveFile(uri, fileName);
-        } else if (action === "SHARE_FILE") {
-          response = await shareFile(payload.uri);
         }
         break;
 
@@ -560,13 +452,10 @@ export const getNativeBridgeScript = (): string => {
 
 export default {
   requestCameraPermission,
-  requestLocationPermission,
   requestMediaLibraryPermission,
   requestNotificationsPermission,
-  getCurrentLocation,
   pickImage,
   takePicture,
-  saveFile,
   shareFile,
   setupPushNotifications,
   scheduleLocalNotification,

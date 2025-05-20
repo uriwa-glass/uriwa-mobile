@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1000378971124",
+    "project_id": "uriwa-mobile",
+    "storage_bucket": "uriwa-mobile.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1000378971124:android:6872318352fed7be037fa1",
+        "android_client_info": {
+          "package_name": "com.uriwa.mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDxToNTqCdxtEkRHlapbNiBIp86UkEDpHY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

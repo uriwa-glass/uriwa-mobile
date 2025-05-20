@@ -53,14 +53,11 @@ export const useUserStore = create<UserStore>()(
       getCurrentUser: async () => {
         try {
           set({ loading: true, error: null });
-          const {
-            data: { session },
-            error: sessionError,
-          } = await supabase.auth.getSession();
-          if (sessionError) throw sessionError;
+          const { data, error: userError } = await supabase.auth.getUser();
+          if (userError) throw userError;
 
-          if (session?.user) {
-            const user = session.user as User; // Cast to your User type
+          if (data?.user) {
+            const user = data.user as User; // Cast to your User type
             set({ currentUser: user, isAuthenticated: true, loading: false });
             // Optionally fetch profile right after getting user
             await get().fetchUserProfile(user.id);

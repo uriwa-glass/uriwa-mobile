@@ -1,6 +1,13 @@
-import React from "react";
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { ThemeProvider } from "@material-tailwind/react";
 import "./App.css";
+import BreakpointDisplay from "./components/BreakpointDisplay";
+import ResponsiveStyles from "./components/ResponsiveStyles";
+import NavigationBar from "./components/NavigationBar";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import Login from "./pages/Login";
+import EnvChecker from "./components/EnvChecker";
 
 // Pages
 import Home from "./pages/Home";
@@ -33,45 +40,372 @@ import CancellationAnalytics from "./pages/admin/CancellationAnalytics";
 // MyPage components
 import MySessions from "./components/mypage/MySessions";
 
-interface AppProps {}
+// 개발 환경에서만 디버깅 도구 활성화
+const isDev = process.env.NODE_ENV === "development";
+
+// Material Tailwind 테마 설정
+const theme = {
+  navbar: {
+    styles: {
+      base: {
+        navbar: {
+          initial: {
+            display: "flex",
+            flexWrap: "nowrap",
+            justifyContent: "space-between",
+            color: "blue-gray",
+          },
+        },
+      },
+    },
+  },
+};
+
+// 인증이 필요한 라우트를 위한 컴포넌트
+interface ProtectedRouteProps {
+  children: React.ReactNode;
+  adminOnly?: boolean;
+}
+
+// 인증이 필요한 라우트 컴포넌트
+const ProtectedRoute = ({ children, adminOnly = false }: ProtectedRouteProps) => {
+  const { user, profile, loading, initialized } = useAuth();
+  const location = useLocation();
+  const [showFallback, setShowFallback] = useState(false);
+
+  // 타임아웃 설정 - 10초 후에도 초기화가 완료되지 않으면 폴백 UI 표시
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (!initialized) {
+        console.log("ProtectedRoute: 초기화 타임아웃 발생, 폴백 UI 표시");
+        setShowFallback(true);
+      }
+    }, 10000); // 10초
+
+    return () => clearTimeout(timeoutId);
+  }, [initialized]);
+
+  console.log("ProtectedRoute 상태:", { user, profile, loading, initialized });
+
+  // 인증 상태가 초기화되기 전에는 로딩 표시
+  if (!initialized) {
+    // 폴백 UI가 활성화된 경우 사용자에게 문제 알림
+    if (showFallback) {
+      return (
+        <div className="flex justify-center items-center h-screen">
+          <div className="text-center max-w-md mx-auto p-6 bg-white rounded-lg shadow-lg">
+            <div className="text-red-500 text-5xl mb-4">⚠️</div>
+            <h2 className="text-xl font-bold mb-4">연결 문제가 발생했습니다</h2>
+            <p className="mb-4 text-gray-600">
+              서버에 연결하는 중 문제가 발생했습니다. 인터넷 연결을 확인한 후 페이지를
+              새로고침해주세요.
+            </p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-[#FF7648] text-white rounded hover:bg-[#E85A2A] transition-colors"
+            >
+              새로고침
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // 일반 로딩 UI
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#FF7648] mx-auto"></div>
+          <p className="mt-4">인증 정보를 확인 중입니다...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // 로그인 상태가 아니면 로그인 페이지로 리디렉션
+  if (!user) {
+    console.log("로그인 필요: 리디렉션 중");
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  // 관리자 전용 페이지인 경우, 관리자가 아니면 접근 금지
+  if (adminOnly && profile?.role !== "admin") {
+    console.log("관리자 권한 필요: 리디렉션 중");
+    return <Navigate to="/" replace />;
+  }
+
+  return <>{children}</>;
+};
+
+// 인증이 필요없는 공개 라우트 컴포넌트
+interface PublicRouteProps {
+  children: React.ReactNode;
+  restrictIfAuth?: boolean; // 인증된 사용자는 접근 제한 (로그인 페이지 등)
+}
+
+// 공개 라우트 컴포넌트
+const PublicRoute = ({ children, restrictIfAuth = false }: PublicRouteProps) => {
+  const { user, loading, initialized } = useAuth();
+  const [showFallback, setShowFallback] = useState(false);
+
+  // 타임아웃 설정 - 10초 후에도 초기화가 완료되지 않으면 폴백 UI 표시
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (!initialized) {
+        console.log("PublicRoute: 초기화 타임아웃 발생, 폴백 UI 표시");
+        setShowFallback(true);
+      }
+    }, 10000); // 10초
+
+    return () => clearTimeout(timeoutId);
+  }, [initialized]);
+
+  console.log("PublicRoute 상태:", { user, loading, initialized });
+
+  console.log(`@@@ initialized : `, initialized);
+
+  // 폴백 UI가 활성화되었거나 초기화가 완료되지 않았을 때
+  if (!initialized) {
+    // 폴백 UI가 활성화된 경우 사용자에게 문제 알림
+    if (showFallback) {
+      return (
+        <div className="flex justify-center items-center h-screen">
+          <div className="text-center max-w-md mx-auto p-6 bg-white rounded-lg shadow-lg">
+            <div className="text-red-500 text-5xl mb-4">⚠️</div>
+            <h2 className="text-xl font-bold mb-4">연결 문제가 발생했습니다</h2>
+            <p className="mb-4 text-gray-600">
+              서버에 연결하는 중 문제가 발생했습니다. 인터넷 연결을 확인한 후 페이지를
+              새로고침해주세요.
+            </p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-[#FF7648] text-white rounded hover:bg-[#E85A2A] transition-colors"
+            >
+              새로고침
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // 일반 로딩 UI
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#FF7648] mx-auto"></div>
+          <p className="mt-4">사이트를 불러오는 중입니다...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // 로그인 페이지 등 인증된 사용자가 접근하면 홈으로 리디렉션
+  if (restrictIfAuth && user) {
+    console.log("이미 로그인됨: 홈으로 리디렉션 중");
+    return <Navigate to="/" replace />;
+  }
+
+  return <>{children}</>;
+};
+
+const AppRoutes = () => {
+  return (
+    <Routes>
+      {/* 공개 라우트 - 인증 불필요 */}
+      <Route
+        path="/"
+        element={
+          <PublicRoute>
+            <Home />
+          </PublicRoute>
+        }
+      />
+
+      <Route
+        path="/login"
+        element={
+          <PublicRoute restrictIfAuth>
+            <Login />
+          </PublicRoute>
+        }
+      />
+
+      <Route
+        path="/class-intro/:id"
+        element={
+          <PublicRoute>
+            <ClassIntro />
+          </PublicRoute>
+        }
+      />
+
+      {/* 인증이 필요한 일반 사용자 라우트 */}
+      <Route
+        path="/inquiry"
+        element={
+          <ProtectedRoute>
+            <Inquiry />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/inquiry/dynamic"
+        element={
+          <ProtectedRoute>
+            <DynamicInquiry />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/inquiry-detail/:id"
+        element={
+          <ProtectedRoute>
+            <InquiryDetail />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/reservation/:id"
+        element={
+          <ProtectedRoute>
+            <Reservation />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/reservation-confirmation"
+        element={
+          <ProtectedRoute>
+            <ReservationConfirmation />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/reservation-cancel/:id"
+        element={
+          <ProtectedRoute>
+            <ReservationCancel />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/cancellation-history"
+        element={
+          <ProtectedRoute>
+            <CancellationHistory />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/reservation-detail/:id"
+        element={
+          <ProtectedRoute>
+            <ReservationDetail />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* MyPage 라우트 - 모두 인증 필요 */}
+      <Route
+        path="/mypage"
+        element={
+          <ProtectedRoute>
+            <MyPageLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<Navigate to="profile" replace />} />
+        <Route path="profile" element={<ProfilePage />} />
+        <Route path="reservations" element={<ReservationsPage />} />
+        <Route path="sessions" element={<SessionsPage />} />
+        <Route path="inquiries" element={<InquiriesPage />} />
+        <Route path="settings" element={<SettingsPage />} />
+      </Route>
+
+      {/* 관리자 라우트 - 관리자 권한 필요 */}
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute adminOnly>
+            <AdminDashboard />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/form-templates"
+        element={
+          <ProtectedRoute adminOnly>
+            <FormTemplates />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/form-create"
+        element={
+          <ProtectedRoute adminOnly>
+            <FormCreate />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/cancellation-manager"
+        element={
+          <ProtectedRoute adminOnly>
+            <CancellationManager />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/cancellation-analytics"
+        element={
+          <ProtectedRoute adminOnly>
+            <CancellationAnalytics />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* 404 Route */}
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  );
+};
 
 const App = () => {
   return (
     <Router>
-      <div className="App">
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/class-intro/:id" element={<ClassIntro />} />
-          <Route path="/inquiry" element={<Inquiry />} />
-          <Route path="/inquiry/dynamic" element={<DynamicInquiry />} />
-          <Route path="/inquiry-detail/:id" element={<InquiryDetail />} />
-          <Route path="/reservation/:id" element={<Reservation />} />
-          <Route path="/reservation-confirmation" element={<ReservationConfirmation />} />
-          <Route path="/reservation-cancel/:id" element={<ReservationCancel />} />
-          <Route path="/cancellation-history" element={<CancellationHistory />} />
-          <Route path="/reservation-detail/:id" element={<ReservationDetail />} />
+      <ThemeProvider value={theme}>
+        <AuthProvider>
+          {/* 환경 변수 확인 컴포넌트 */}
+          <EnvChecker />
 
-          {/* MyPage Routes */}
-          <Route path="/mypage" element={<MyPageLayout />}>
-            <Route index element={<Navigate to="profile" replace />} />
-            <Route path="profile" element={<ProfilePage />} />
-            <Route path="reservations" element={<ReservationsPage />} />
-            <Route path="sessions" element={<SessionsPage />} />
-            <Route path="inquiries" element={<InquiriesPage />} />
-            <Route path="settings" element={<SettingsPage />} />
-          </Route>
+          {/* 반응형 스타일 적용 */}
+          <ResponsiveStyles />
 
-          {/* Admin Routes */}
-          <Route path="/admin" element={<AdminDashboard />} />
-          <Route path="/admin/form-templates" element={<FormTemplates />} />
-          <Route path="/admin/form-create" element={<FormCreate />} />
-          <Route path="/admin/cancellation-manager" element={<CancellationManager />} />
-          <Route path="/admin/cancellation-analytics" element={<CancellationAnalytics />} />
+          {/* 개발 환경에서만 브레이크포인트 디버깅 도구 표시 */}
+          {isDev && <BreakpointDisplay show={true} position="bottom-right" showDetails={true} />}
 
-          {/* 404 Route */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </div>
+          <div className="App">
+            {/* 네비게이션 바 추가 */}
+            <NavigationBar />
+
+            {/* 네비게이션 바의 위치에 따라 콘텐츠 패딩 조정 */}
+            <div className="pb-16 lg:pl-20">
+              <AppRoutes />
+            </div>
+          </div>
+        </AuthProvider>
+      </ThemeProvider>
     </Router>
   );
 };

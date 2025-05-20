@@ -3,24 +3,15 @@
  * 애플리케이션 전체에서 API 관련 기능을 사용할 수 있도록 내보냅니다.
  */
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import React, { useEffect, useState } from "react";
-import supabase from "../config/supabase";
+import { useEffect, useState } from "react";
 import authHelper from "../utils/authHelper";
 
 // Supabase API 클라이언트
 export { supabaseApi, ApiError } from "./supabaseApi";
 
-// React Query 클라이언트 생성
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 1,
-      refetchOnWindowFocus: false,
-      staleTime: 5 * 60 * 1000, // 5분
-    },
-  },
-});
+// React Query 관련 내보내기
+export { queryClient } from "./queryClient";
+export { QueryProvider } from "./QueryProvider";
 
 // API 오류 처리 함수
 export const handleAPIError = (error: any): string => {
@@ -57,11 +48,6 @@ export const useAuth = () => {
   }, []);
 
   return { isAuthenticated, isLoading };
-};
-
-// QueryProvider 컴포넌트
-export const QueryProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
 };
 
 // API 호출 훅

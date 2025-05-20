@@ -25,8 +25,14 @@ export const handleDeepLink = async (
     const path = parsedUrl.pathname;
     const searchParams = parsedUrl.searchParams;
 
-    // 경로 기반 라우팅
-    if (path.startsWith("/auth/")) {
+    // 특수 경로 처리
+    if (url.includes("login-callback")) {
+      // OAuth 로그인 콜백 처리
+      return handleLoginCallback(url, navigation);
+    } else if (url.includes("reset-password-callback")) {
+      // 비밀번호 재설정 콜백 처리
+      return handlePasswordResetCallback(url, navigation);
+    } else if (path.startsWith("/auth/")) {
       return handleAuthDeepLink(path, searchParams, navigation);
     } else if (path.startsWith("/class/")) {
       // 수업 상세 페이지로 이동
@@ -47,6 +53,68 @@ export const handleDeepLink = async (
     return true;
   } catch (error) {
     console.error("Deep link handling error:", error);
+    return false;
+  }
+};
+
+/**
+ * OAuth 로그인 콜백 처리 함수
+ * @param url 콜백 URL
+ * @param navigation 네비게이션 컨테이너 참조
+ * @returns 처리 성공 여부
+ */
+const handleLoginCallback = async (
+  url: string,
+  navigation: NavigationContainerRef<RootStackParamList>
+): Promise<boolean> => {
+  try {
+    // 로그인 성공 후 처리
+    const token = url.includes("access_token=")
+      ? new URL(url).searchParams.get("access_token")
+      : null;
+
+    if (token) {
+      await authHelper.setAuthToken(token);
+
+      // 사용자 인증 성공 후 메인 화면으로 이동
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "MainTab" }],
+      });
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error("OAuth login callback error:", error);
+    return false;
+  }
+};
+
+/**
+ * 비밀번호 재설정 콜백 처리 함수
+ * @param url 콜백 URL
+ * @param navigation 네비게이션 컨테이너 참조
+ * @returns 처리 성공 여부
+ */
+const handlePasswordResetCallback = async (
+  url: string,
+  navigation: NavigationContainerRef<RootStackParamList>
+): Promise<boolean> => {
+  try {
+    // 비밀번호 재설정 토큰 파싱
+    const parsedUrl = new URL(url);
+    const token = parsedUrl.searchParams.get("token");
+
+    if (token) {
+      // 여기서 추가 처리가 필요하다면 추가
+
+      // 로그인 화면으로 돌아가기
+      navigation.navigate("Login");
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error("Password reset callback error:", error);
     return false;
   }
 };

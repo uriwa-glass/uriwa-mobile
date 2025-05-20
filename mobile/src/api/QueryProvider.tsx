@@ -1,32 +1,11 @@
 import React from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "./queryClient";
 
 /**
- * Query 클라이언트 설정
+ * React Query 상태 관리를 위한 Provider 컴포넌트
+ * 애플리케이션의 상태 관리를 담당합니다.
  */
-const createQueryClient = () =>
-  new QueryClient({
-    defaultOptions: {
-      queries: {
-        staleTime: 1000 * 60 * 5, // 5분
-        gcTime: 1000 * 60 * 30, // 30분 (이전의 cacheTime)
-        retry: 1,
-        refetchOnWindowFocus: false,
-      },
-    },
-  });
-
-/**
- * React Query Provider
- * 애플리케이션 전체에서 React Query를 사용할 수 있도록 제공합니다.
- */
-interface QueryProviderProps {
-  children: React.ReactNode;
-}
-
-export const QueryProvider: React.FC<QueryProviderProps> = ({ children }) => {
-  // 클라이언트 인스턴스 생성
-  const [queryClient] = React.useState(() => createQueryClient());
-
+export const QueryProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
 };

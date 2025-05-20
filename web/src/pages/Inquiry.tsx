@@ -48,7 +48,7 @@ const Inquiry = () => {
         const { data: profileData } = await supabase
           .from("user_profiles")
           .select("*")
-          .eq("user_id", authUser.id)
+          .eq("id", authUser.id)
           .single();
         if (profileData) {
           setProfile(profileData);
@@ -96,17 +96,34 @@ const Inquiry = () => {
     if (!validateForm()) return;
     try {
       setIsSubmitting(true);
-      const { error } = await supabase.from("inquiries").insert([
+      // 먼저 테이블 존재 여부 확인
+      const { data: tables } = await supabase
+        .from("pg_tables")
+        .select("tablename")
+        .eq("schemaname", "public");
+      console.log("Available tables:", tables);
+
+      // form_submissions 테이블에 데이터 삽입
+      const { error } = await supabase.from("form_submissions").insert([
         {
-          name: form.name,
-          email: form.email,
-          phone: form.phone,
-          subject: form.subject,
-          message: form.message,
+          template_id: "inquiry", // 문의하기 템플릿 ID
           user_id: user?.id,
+          data: {
+            name: form.name,
+            email: form.email,
+            phone: form.phone,
+            subject: form.subject,
+            message: form.message,
+          },
+          status: "submitted",
         },
       ]);
-      if (error) throw error;
+
+      if (error) {
+        console.error("Submission error:", error);
+        throw error;
+      }
+
       alert("문의가 접수되었습니다. 빠른 시일 내에 답변드리겠습니다.");
       navigate(-1);
     } catch (error) {

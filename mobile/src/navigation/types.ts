@@ -17,6 +17,8 @@ export type MainTabParamList = {
 export type RootStackParamList = {
   MainTab: NavigatorScreenParams<MainTabParamList>;
   Login: undefined;
+  Signup: undefined;
+  PasswordReset: undefined;
   WebDetail: { url: string; title?: string };
   Settings: undefined;
   About: undefined;
