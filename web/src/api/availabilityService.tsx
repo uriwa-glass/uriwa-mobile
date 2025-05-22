@@ -1,15 +1,39 @@
 import { supabase } from "./supabaseClient";
-import {
-  ClassSchedule,
-  AvailabilityResponse,
-  ScheduleWithAvailability,
-  ReservationStatus,
-} from "../types";
+import { ClassSchedule } from "../types/models/class";
+import { ReservationStatus } from "../types/models/reservation";
 
 /**
  * 수업 가용성 체크를 위한 서비스
  * 캐싱, 동시성 제어, 가용성 확인 등의 기능을 제공합니다.
  */
+
+// 가용성 응답 인터페이스 (기존 AvailabilityResponse 대체)
+export interface AvailabilityResponse {
+  available: boolean;
+  remaining_seats: number;
+  total_capacity: number;
+  class_id: string;
+  schedule_id: string;
+  message?: string;
+}
+
+// 가용성 정보가 포함된 스케줄 (기존 ScheduleWithAvailability 대체)
+export interface ScheduleWithAvailability {
+  id: string;
+  class_id: string;
+  date: string;
+  duration: number;
+  capacity: number;
+  remaining_seats: number;
+  is_cancelled: boolean;
+  created_at: string;
+  updated_at: string;
+  availabilityStatus: string;
+  classes?: any; // 유연성을 위해 any 타입 사용
+  cancellation_reason?: string;
+  instructor_id?: string;
+  location?: string;
+}
 
 interface AvailabilityCache {
   schedules: Record<string, any>;

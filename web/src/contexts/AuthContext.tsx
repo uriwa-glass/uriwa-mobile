@@ -1,7 +1,23 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { Session, User } from "@supabase/supabase-js";
-import { supabase } from "../api/supabaseClient";
-import { AuthContextType, UserProfile } from "../types/models/user";
+import { supabase, fetchOrCreateUserProfile } from "../api/supabaseClient";
+import { UserProfile } from "../types/models/user";
+
+// 기본 인증 컨텍스트 타입
+export interface AuthContextType {
+  user: User | null;
+  profile: UserProfile | null;
+  session: Session | null;
+  loading: boolean;
+  error: Error | null;
+  isLoggedIn: boolean;
+  initialized: boolean;
+  signIn: (provider: string) => Promise<void>;
+  signInWithEmailPassword: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string, metadata?: any) => Promise<void>;
+  signOut: () => Promise<void>;
+  updateProfile: (data: Partial<UserProfile>) => Promise<void>;
+}
 
 // 기본 컨텍스트 생성
 const AuthContext = createContext<AuthContextType>({
@@ -9,230 +25,170 @@ const AuthContext = createContext<AuthContextType>({
   profile: null,
   session: null,
   loading: true,
-  initialized: false,
   error: null,
+  isLoggedIn: false,
+  initialized: false,
   signIn: async () => {},
   signInWithEmailPassword: async () => {},
   signUp: async () => {},
   signOut: async () => {},
-  refreshSession: async () => {},
   updateProfile: async () => {},
 });
-
-// 세션 가져오기에 대한 타임아웃 설정 (밀리초 단위)
-const SESSION_FETCH_TIMEOUT = 10000;
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [initialized, setInitialized] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [initialized, setInitialized] = useState(false);
 
   // 초기 세션 상태 로드 및 세션 변경 감지
   useEffect(() => {
-    console.log("AuthContext: Loading initial auth state");
-    let isMounted = true; // 컴포넌트 마운트 상태 추적
+    console.log("AuthContext: 초기 인증 상태 로딩 중");
 
-    // 안전하게 초기화 상태를 완료로 설정하는 함수
-    const completeInitialization = () => {
-      if (isMounted && !initialized) {
-        console.log("AuthContext: Forcing initialization complete");
+    // 초기 사용자 및 세션 정보 로드
+    const loadInitialAuthState = async () => {
+      try {
+        setLoading(true);
+
+        // 현재 세션 가져오기
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+
+        if (sessionError) {
+          console.error("세션 로드 오류:", sessionError);
+          throw sessionError;
+        }
+
+        if (sessionData?.session) {
+          console.log("세션 정보 로드됨:", sessionData.session.user.id);
+          setSession(sessionData.session);
+          setUser(sessionData.session.user);
+          setIsLoggedIn(true);
+
+          // 프로필 정보 로드
+          try {
+            const userProfile = await fetchOrCreateUserProfile(sessionData.session.user.id);
+            if (userProfile) {
+              setProfile(userProfile);
+            }
+          } catch (profileError) {
+            console.error("프로필 로드 오류:", profileError);
+          }
+        } else {
+          console.log("유효한 세션 없음");
+          setUser(null);
+          setSession(null);
+          setProfile(null);
+          setIsLoggedIn(false);
+        }
+      } catch (err) {
+        console.error("인증 상태 초기화 중 오류:", err);
+        setError(err instanceof Error ? err : new Error(String(err)));
+      } finally {
         setLoading(false);
         setInitialized(true);
       }
     };
 
-    // 로컬 스토리지에서 직접 세션 확인
-    // Supabase API가 응답하지 않을 때 대비
-    const checkLocalStorageSession = () => {
-      try {
-        if (typeof window === "undefined") return false;
-
-        // Supabase는 로컬 스토리지에 세션 정보를 저장함
-        const supabaseSessionKey = Object.keys(localStorage).find(
-          (key) => key.startsWith("sb-") && key.endsWith("-auth-token")
-        );
-
-        if (supabaseSessionKey) {
-          const sessionStr = localStorage.getItem(supabaseSessionKey);
-          if (sessionStr) {
-            try {
-              const sessionData = JSON.parse(sessionStr);
-              console.log("AuthContext: Found session in localStorage", !!sessionData);
-              return true;
-            } catch (e) {
-              console.error("AuthContext: Error parsing localStorage session", e);
-            }
-          }
-        }
-
-        console.log("AuthContext: No session found in localStorage");
-        return false;
-      } catch (err) {
-        console.error("AuthContext: Error checking localStorage session", err);
-        return false;
-      }
-    };
-
-    // 타임아웃 설정 - 인증 정보 가져오기가 지정된 시간 내에 완료되지 않으면 강제로 초기화 완료 처리
-    const timeoutId = setTimeout(() => {
-      console.log(`AuthContext: Auth fetch timed out after ${SESSION_FETCH_TIMEOUT}ms`);
-
-      // 로컬 스토리지에서 세션 확인 시도
-      const hasLocalSession = checkLocalStorageSession();
-
-      // 상태 업데이트
-      if (isMounted) {
-        if (hasLocalSession) {
-          console.log("AuthContext: Using session from localStorage due to timeout");
-          // refreshSession()을 호출하여 세션 복구 시도
-          refreshSession().catch((e) => {
-            console.error("AuthContext: Failed to refresh session after timeout", e);
-          });
-        }
-
-        // 초기화 강제 완료
-        completeInitialization();
-      }
-    }, SESSION_FETCH_TIMEOUT);
-
-    const loadInitialAuthState = async () => {
-      if (!isMounted) return;
-
-      try {
-        setLoading(true);
-        console.log("AuthContext: Getting user from Supabase - STARTING");
-
-        // getUser()로 변경: 현재 사용자 정보만 가져오기
-        const { data: userData, error: userError } = await supabase.auth.getUser();
-        console.log("AuthContext: getUser response received");
-
-        if (userError) {
-          console.error("AuthContext: User fetch error", userError);
-          throw userError;
-        }
-
-        console.log("AuthContext: User data", userData?.user);
-
-        if (userData?.user) {
-          setUser(userData.user);
-
-          // 사용자가 있으면 세션도 가져옴 (필요한 토큰 정보를 위해)
-          const { data: sessionData } = await supabase.auth.getSession();
-          if (sessionData?.session) {
-            setSession(sessionData.session);
-          }
-
-          // 사용자 프로필 가져오기
-          await fetchUserProfile(userData.user.id);
-        } else {
-          // 사용자가 없으면 로그인되지 않은 상태
-          setUser(null);
-          setSession(null);
-          setProfile(null);
-        }
-
-        if (isMounted) {
-          clearTimeout(timeoutId); // 성공적으로 완료되면 타임아웃 취소
-          setLoading(false);
-          setInitialized(true);
-          console.log("AuthContext: Initialization complete");
-        }
-      } catch (err) {
-        console.error("AuthContext: Failed to load initial auth state:", err);
-        if (isMounted) {
-          setError(err instanceof Error ? err : new Error(String(err)));
-          setLoading(false);
-          setInitialized(true); // 에러가 발생해도 초기화는 완료로 간주
-        }
-      }
-    };
-
-    // 세션 변경 이벤트 구독
+    // 인증 상태 변경 감지 리스너
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, newSession) => {
-      console.log(`AuthContext: Auth state changed: ${event}`, newSession);
+      console.log(`인증 상태 변경: ${event}`, newSession?.user?.id);
 
-      if (isMounted) {
-        // 이벤트 발생 시 로딩 상태 업데이트
-        setLoading(true);
-
-        // 세션 업데이트
+      if (event === "SIGNED_IN" && newSession) {
         setSession(newSession);
+        setUser(newSession.user);
+        setIsLoggedIn(true);
 
-        // 사용자 정보 업데이트
-        if (newSession?.user) {
-          setUser(newSession.user);
-          await fetchUserProfile(newSession.user.id);
-        } else {
-          setUser(null);
-          setProfile(null);
+        // 프로필 정보 로드
+        try {
+          const userProfile = await fetchOrCreateUserProfile(newSession.user.id);
+          if (userProfile) {
+            setProfile(userProfile);
+          }
+        } catch (profileError) {
+          console.error("프로필 로드 오류:", profileError);
         }
-
-        // 이벤트 처리 완료 후 로딩 상태 업데이트
-        setLoading(false);
-
-        // 이 시점에서 초기화되지 않았다면 초기화 완료로 설정
-        if (!initialized) {
-          setInitialized(true);
-          console.log("AuthContext: Initialization complete after auth state change");
-        }
+      } else if (event === "SIGNED_OUT") {
+        setUser(null);
+        setSession(null);
+        setProfile(null);
+        setIsLoggedIn(false);
+      } else if (event === "TOKEN_REFRESHED" && newSession) {
+        setSession(newSession);
+        setUser(newSession.user);
       }
     });
 
-    // 초기 인증 상태 로드 시작
+    // 초기 인증 상태 로드
     loadInitialAuthState();
 
-    // Clean up the subscription, timeout, and mounted flag
+    // 클린업 함수: 리스너 제거
     return () => {
-      clearTimeout(timeoutId);
-      isMounted = false;
       authListener.subscription.unsubscribe();
     };
   }, []);
 
-  // 사용자 프로필 가져오기
-  const fetchUserProfile = async (userId: string) => {
-    try {
-      console.log("AuthContext: Fetching user profile for", userId);
-
-      const { data, error } = await supabase
-        .from("user_profiles")
-        .select("*")
-        .eq("user_id", userId)
-        .single();
-
-      if (error) {
-        console.error("AuthContext: Error fetching profile", error);
-        throw error;
-      }
-
-      console.log("AuthContext: Profile data", data);
-      setProfile(data as UserProfile);
-    } catch (err) {
-      console.error("AuthContext: Error fetching user profile:", err);
-      setError(err instanceof Error ? err : new Error(String(err)));
-      // 프로필 조회 실패시에도 null로 설정하여 UI에서 처리 가능하게 함
-      setProfile(null);
-    }
-  };
-
-  // OAuth 로그인
+  // 소셜 로그인 (OAuth)
   const signIn = async (provider: string) => {
     try {
       setLoading(true);
-      setError(null);
-      const { error } = await supabase.auth.signInWithOAuth({
+      console.log(`${provider} 로그인 시작`);
+
+      // 로컬 개발 환경에서 콜백 URL 설정
+      const isDev = process.env.NODE_ENV === "development";
+      const isLocalhost =
+        window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+
+      // 고정 리디렉션 URL 사용
+      // 중요: 이 URL은 구글 콘솔에 등록된 URI와 정확히 일치해야 함
+      // 127.0.0.1:54321/auth/v1/callback은 직접 Supabase로 리디렉션됨
+      const redirectTo = "http://127.0.0.1:3000/auth/callback";
+
+      console.log(
+        `로그인 환경: ${isDev ? "개발" : "프로덕션"}, 호스트: ${window.location.hostname}`
+      );
+      console.log(`로그인 리디렉션 URL(하드코딩): ${redirectTo}`);
+
+      // 디버깅 정보 출력
+      console.log(`Supabase 인증 시도: ${provider}`);
+      console.log(`현재 URL: ${window.location.href}`);
+      console.log(`리디렉션 URL: ${redirectTo}`);
+
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: provider as any,
         options: {
-          redirectTo: window.location.origin,
+          redirectTo: redirectTo,
+          skipBrowserRedirect: false,
+          // queryParams 추가 (구글 로그인용)
+          queryParams:
+            provider === "google"
+              ? {
+                  // 승인된 JavaScript 원본에 등록된 도메인과 일치해야 함
+                  prompt: "consent",
+                  access_type: "offline",
+                }
+              : undefined,
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error(`${provider} 로그인 오류:`, error);
+
+        // 오류 메시지 변환
+        if (error.message.includes("provider is not enabled")) {
+          throw new Error(
+            `${provider} 로그인이 현재 시스템에서 활성화되어 있지 않습니다. 개발 환경에서는 이메일 로그인을 이용해주세요.`
+          );
+        }
+
+        throw error;
+      }
+
+      console.log(`${provider} 로그인 프로세스 시작됨`, data);
     } catch (err) {
-      console.error(`Error signing in with ${provider}:`, err);
+      console.error("로그인 실패:", err);
       setError(err instanceof Error ? err : new Error(String(err)));
     } finally {
       setLoading(false);
@@ -243,15 +199,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signInWithEmailPassword = async (email: string, password: string) => {
     try {
       setLoading(true);
-      setError(null);
-      const { error } = await supabase.auth.signInWithPassword({
+      console.log(`이메일 로그인 시작: ${email}`);
+
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) throw error;
+
+      console.log("이메일 로그인 성공");
     } catch (err) {
-      console.error("Error signing in with email/password:", err);
+      console.error("이메일 로그인 실패:", err);
       setError(err instanceof Error ? err : new Error(String(err)));
     } finally {
       setLoading(false);
@@ -262,8 +221,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signUp = async (email: string, password: string, metadata = {}) => {
     try {
       setLoading(true);
-      setError(null);
-      const { error } = await supabase.auth.signUp({
+      console.log(`회원가입 시작: ${email}`);
+
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -272,8 +232,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       });
 
       if (error) throw error;
+
+      console.log("회원가입 성공");
     } catch (err) {
-      console.error("Error signing up:", err);
+      console.error("회원가입 실패:", err);
       setError(err instanceof Error ? err : new Error(String(err)));
     } finally {
       setLoading(false);
@@ -284,37 +246,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signOut = async () => {
     try {
       setLoading(true);
-      setError(null);
+      console.log("로그아웃 시작");
+
       const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-    } catch (err) {
-      console.error("Error signing out:", err);
-      setError(err instanceof Error ? err : new Error(String(err)));
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  // 세션 새로고침
-  const refreshSession = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const { error } = await supabase.auth.refreshSession();
       if (error) throw error;
 
-      // 최신 사용자 정보 가져오기
-      const { data: userData } = await supabase.auth.getUser();
-      if (userData?.user) {
-        setUser(userData.user);
-        await fetchUserProfile(userData.user.id);
-      }
-
-      // 세션 정보 업데이트
-      const { data: sessionData } = await supabase.auth.getSession();
-      setSession(sessionData.session);
+      // 상태 초기화는 onAuthStateChange 리스너에서 처리됨
+      console.log("로그아웃 성공");
     } catch (err) {
-      console.error("Error refreshing session:", err);
+      console.error("로그아웃 실패:", err);
       setError(err instanceof Error ? err : new Error(String(err)));
     } finally {
       setLoading(false);
@@ -323,44 +264,58 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   // 프로필 업데이트
   const updateProfile = async (data: Partial<UserProfile>) => {
-    if (!user) {
-      setError(new Error("No authenticated user"));
-      return;
-    }
-
     try {
       setLoading(true);
-      setError(null);
-      const { error } = await supabase.from("user_profiles").update(data).eq("user_id", user.id);
 
-      if (error) throw error;
+      if (!user) {
+        throw new Error("로그인 상태가 아닐 때 프로필을 업데이트할 수 없습니다");
+      }
 
-      // 업데이트된 프로필 다시 가져오기
-      await fetchUserProfile(user.id);
+      console.log(`프로필 업데이트 중: ${user.id}`, data);
+
+      const { data: updatedProfile, error } = await supabase
+        .from("user_profiles")
+        .update({
+          ...data,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("user_id", user.id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error("프로필 업데이트 오류:", error);
+        throw error;
+      }
+
+      console.log("프로필 업데이트 성공");
+      setProfile(updatedProfile as UserProfile);
     } catch (err) {
-      console.error("Error updating profile:", err);
+      console.error("프로필 업데이트 실패:", err);
       setError(err instanceof Error ? err : new Error(String(err)));
     } finally {
       setLoading(false);
     }
   };
 
-  const value = {
+  // 컨텍스트 값
+  const value: AuthContextType = {
     user,
     profile,
     session,
     loading,
-    initialized,
     error,
+    isLoggedIn,
+    initialized,
     signIn,
     signInWithEmailPassword,
     signUp,
     signOut,
-    refreshSession,
     updateProfile,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
+// 인증 컨텍스트 훅
 export const useAuth = () => useContext(AuthContext);

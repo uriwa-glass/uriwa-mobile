@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, Suspense, lazy } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { ThemeProvider } from "@material-tailwind/react";
 import "./App.css";
@@ -8,6 +8,7 @@ import NavigationBar from "./components/NavigationBar";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import Login from "./pages/Login";
 import EnvChecker from "./components/EnvChecker";
+import { useMediaQuery } from "react-responsive";
 
 // Pages
 import Home from "./pages/Home";
@@ -39,6 +40,13 @@ import CancellationAnalytics from "./pages/admin/CancellationAnalytics";
 
 // MyPage components
 import MySessions from "./components/mypage/MySessions";
+
+// 페이지 컴포넌트 - 코드 스플리팅
+const Signup = lazy(() => import("./pages/Signup"));
+const AuthCallback = lazy(() => import("./pages/AuthCallback"));
+
+// 로딩 화면 컴포넌트
+const LoadingScreen = lazy(() => import("./components/LoadingScreen"));
 
 // 개발 환경에서만 디버깅 도구 활성화
 const isDev = process.env.NODE_ENV === "development";
@@ -200,6 +208,8 @@ const PublicRoute = ({ children, restrictIfAuth = false }: PublicRouteProps) => 
   }
 
   // 로그인 페이지 등 인증된 사용자가 접근하면 홈으로 리디렉션
+  console.log("@@@ restrictIfAuth : ", restrictIfAuth);
+  console.log("@@@ user : ", user);
   if (restrictIfAuth && user) {
     console.log("이미 로그인됨: 홈으로 리디렉션 중");
     return <Navigate to="/" replace />;
@@ -226,6 +236,32 @@ const AppRoutes = () => {
         element={
           <PublicRoute restrictIfAuth>
             <Login />
+          </PublicRoute>
+        }
+      />
+
+      <Route
+        path="/signup"
+        element={
+          <PublicRoute restrictIfAuth>
+            <Suspense
+              fallback={<div className="flex justify-center items-center h-screen">로딩 중...</div>}
+            >
+              <Signup />
+            </Suspense>
+          </PublicRoute>
+        }
+      />
+
+      <Route
+        path="/auth/callback"
+        element={
+          <PublicRoute>
+            <Suspense
+              fallback={<div className="flex justify-center items-center h-screen">로딩 중...</div>}
+            >
+              <AuthCallback />
+            </Suspense>
           </PublicRoute>
         }
       />
@@ -382,10 +418,39 @@ const AppRoutes = () => {
 };
 
 const App = () => {
+  // 반응형 화면 설정
+  const isMobile = useMediaQuery({ maxWidth: 767 });
+
+  useEffect(() => {
+    // 모바일 환경에서 뷰포트 높이 설정 (iOS Safari 관련 문제 해결)
+    const setVh = () => {
+      const vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty("--vh", `${vh}px`);
+    };
+
+    setVh();
+    window.addEventListener("resize", setVh);
+    return () => window.removeEventListener("resize", setVh);
+  }, []);
+
   return (
     <Router>
       <ThemeProvider value={theme}>
         <AuthProvider>
+          <Suspense
+            fallback={<div className="flex justify-center items-center h-screen">로딩 중...</div>}
+          >
+            <div className="App">
+              {/* 네비게이션 바 추가 */}
+              <NavigationBar />
+
+              {/* 네비게이션 바의 위치에 따라 콘텐츠 패딩 조정 */}
+              <div className="pb-16 lg:pl-20">
+                <AppRoutes />
+              </div>
+            </div>
+          </Suspense>
+
           {/* 환경 변수 확인 컴포넌트 */}
           <EnvChecker />
 
@@ -394,16 +459,6 @@ const App = () => {
 
           {/* 개발 환경에서만 브레이크포인트 디버깅 도구 표시 */}
           {isDev && <BreakpointDisplay show={true} position="bottom-right" showDetails={true} />}
-
-          <div className="App">
-            {/* 네비게이션 바 추가 */}
-            <NavigationBar />
-
-            {/* 네비게이션 바의 위치에 따라 콘텐츠 패딩 조정 */}
-            <div className="pb-16 lg:pl-20">
-              <AppRoutes />
-            </div>
-          </div>
         </AuthProvider>
       </ThemeProvider>
     </Router>

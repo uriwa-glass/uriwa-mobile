@@ -6,7 +6,12 @@ import {
   ClassInfo,
   ScheduleFilters,
   AvailabilityStatus,
-} from "../types/stores";
+  availabilityStatusSchema,
+  scheduleSchema,
+  classInfoSchema,
+  scheduleFiltersSchema,
+  scheduleViewSchema,
+} from "../types/models/store";
 import {
   getSchedulesAvailability as apiGetSchedules,
   checkScheduleAvailability as apiGetScheduleDetails,

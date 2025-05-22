@@ -4,7 +4,7 @@ import {
   UserInquiryMessage,
   UserInquiryFilter,
   UserInquiryCreateData,
-} from "../types";
+} from "../types/models/inquiry";
 import { API_BASE_URL } from "../config";
 
 /**

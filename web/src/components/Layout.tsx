@@ -1,6 +1,8 @@
-import React from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useResponsive } from "../hooks/useResponsive";
+import { useAuth } from "../contexts/AuthContext";
+import { Link } from "react-router-dom";
 
 interface LayoutProps {
   title?: string;
@@ -22,10 +24,35 @@ const Layout: React.FC<LayoutProps> = ({
   centerContent = false,
 }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { isMobile, isTablet, isDesktop } = useResponsive();
+  const { user, profile } = useAuth();
+
+  const isLoggedIn = !!user && !!profile;
+  const isLoginPage = location.pathname === "/login";
+
+  // 디버깅을 위해 현재 경로 확인
+  useEffect(() => {
+    console.log("현재 경로:", location.pathname);
+  }, [location.pathname]);
 
   const handleBack = () => {
     navigate(-1);
+  };
+
+  const handleProfileClick = () => {
+    navigate("/mypage");
+  };
+
+  const handleLoginClick = (e: React.MouseEvent) => {
+    e.preventDefault(); // 기본 동작 방지
+    console.log("로그인 버튼 클릭됨, 로그인 페이지로 이동 시도");
+
+    // 직접 URL 변경 시도
+    window.location.href = "/login";
+
+    // navigate 함수도 시도
+    // navigate("/login", { replace: true });
   };
 
   // 최대 너비 클래스
@@ -75,6 +102,46 @@ const Layout: React.FC<LayoutProps> = ({
           >
             {title}
           </h1>
+        )}
+
+        {/* 프로필 아이콘 또는 로그인 버튼 */}
+        {isLoggedIn ? (
+          <button
+            onClick={handleProfileClick}
+            className="ml-auto flex items-center focus:outline-none"
+            aria-label="마이페이지"
+          >
+            {profile?.avatar_url ? (
+              <img
+                src={profile.avatar_url}
+                alt="프로필"
+                className="w-8 h-8 rounded-full object-cover border border-gray-200"
+              />
+            ) : (
+              <svg
+                className="w-8 h-8 text-primary-main"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            )}
+          </button>
+        ) : (
+          !isLoginPage && (
+            <Link
+              to="/login"
+              className="ml-auto py-2 px-4 bg-primary-main text-white font-medium rounded-md hover:bg-primary-dark transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-light no-underline"
+              aria-label="로그인"
+            >
+              로그인
+            </Link>
+          )
         )}
       </header>
 

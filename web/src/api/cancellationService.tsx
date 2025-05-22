@@ -1,16 +1,14 @@
 import { supabase } from "./supabaseClient";
 import { invalidateScheduleCache } from "./availabilityService";
 import {
-  Reservation,
-  ClassSchedule,
   Cancellation,
-  UserProfile,
-  CancellationPolicies,
-  TimeCancellationPolicy,
-  MembershipCancellationPolicy,
-  ClassTypeCancellationPolicy,
   CancellationCheck,
-} from "../types";
+  CancellationPolicies,
+  Reservation,
+  TimeCancellationPolicy,
+} from "@/types/models/reservation";
+import { ClassSchedule } from "@/types/models/class";
+import { UserProfile } from "@/types/models/user";
 
 /**
  * 취소 정책 관리 및 예약 취소를 위한 서비스

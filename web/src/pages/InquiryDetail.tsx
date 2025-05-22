@@ -5,8 +5,9 @@ import { format } from "date-fns";
 import { ko } from "date-fns/locale";
 import { getInquiryDetail, addInquiryMessage } from "../api/inquiryService";
 import { useUserStore } from "../stores/userStore";
-import { UserInquiry, UserInquiryMessage } from "../types";
+
 import LoadingSpinner from "../components/common/LoadingSpinner";
+import { UserInquiry, UserInquiryMessage } from "@/types/models/inquiry";
 
 const InquiryDetail = () => {
   const { id } = useParams<{ id: string }>();

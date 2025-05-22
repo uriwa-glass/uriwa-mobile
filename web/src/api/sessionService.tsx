@@ -1,5 +1,5 @@
+import { SessionTransaction, UserSession } from "@/types/models/session";
 import { supabase } from "./supabaseClient";
-import { UserSession, SessionTransaction } from "../types"; // UserSession, SessionTransaction 타입 정의 필요
 
 export interface UserSessionResult {
   success: boolean;

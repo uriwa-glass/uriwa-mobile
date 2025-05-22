@@ -1,27 +1,102 @@
-// 모든 타입 정의 내보내기
+export {
+  userProfileSchema,
+  membershipLevelSchema,
+  userRoleSchema,
+  createUserProfileSchema,
+} from "./models/user";
 
-// 사용자 관련 타입
-export * from "./models/user";
+export {
+  classTypeSchema,
+  classCategorySchema,
+  classLevelSchema,
+  classSchema,
+  classScheduleSchema,
+  availabilityResponseSchema,
+  classFilterOptionsSchema,
+  classSortOptionSchema,
+  scheduleGroupSchema,
+  popularClassSchema,
+} from "./models/class";
 
-// 수업 관련 타입
-export * from "./models/class";
+export {
+  reservationStatusSchema,
+  paymentMethodSchema,
+  reservationSchema,
+  reservationRequestSchema,
+  reservationResponseSchema,
+  cancellationRefundStatusSchema,
+  cancellationSchema,
+  timeCancellationPolicySchema,
+  membershipCancellationPolicySchema,
+  classTypeCancellationPolicySchema,
+  cancellationPoliciesSchema,
+  cancellationCheckSchema,
+  cancellationRequestSchema,
+  cancellationResponseSchema,
+  cancellationStatsSchema,
+  cancellationAnalyticsFilterSchema,
+} from "./models/reservation";
 
-// 예약 및 취소 관련 타입
-export * from "./models/reservation";
+export {
+  userSessionSchema,
+  sessionTransactionTypeSchema,
+  sessionTransactionSchema,
+} from "./models/session";
 
-// API 관련 타입
-export * from "./models/api";
+export {
+  inquiryStatusSchema,
+  inquiryPrioritySchema,
+  inquiryCategorySchema,
+  userInquiryMessageSchema,
+  userSchema,
+  userInquirySchema,
+  userInquiryFilterSchema,
+  userInquiryCreateDataSchema,
+} from "./models/inquiry";
 
-// 폼 관련 타입
-export * from "./models/form";
+export {
+  inquiryStatusSchema as formInquiryStatusSchema,
+  formFieldTypeSchema,
+  formFieldSchema,
+  formTemplateSchema,
+  formSubmissionStatusSchema,
+  formSubmissionSchema,
+  inquirySchema,
+  validationRuleTypeSchema,
+  validationRuleSchema,
+  operatorSchema,
+  conditionalDisplaySchema,
+  fieldOptionSchema,
+  styleSchema,
+  formFieldExtendedSchema,
+  formTemplateExtendedSchema,
+  formErrorSchema,
+  fileObjectSchema,
+  dynamicFormPropsSchema,
+} from "./models/form";
 
-// 세션 관련 타입 추가
-export * from "./models/session";
+// 스토어 관련 타입들 내보내기
+export {
+  loadingStateSchema,
+  notificationTypeSchema,
+  themeSchema,
+  notificationSchema,
+  uiStateSchema,
+  paymentStatusTypeSchema,
+  storeReservationSchema,
+  reservationStateSchema,
+  availabilityStatusSchema,
+  scheduleSchema,
+  classInfoSchema,
+  scheduleFiltersSchema,
+  scheduleViewSchema,
+  scheduleStateSchema,
+  userSchema as storeUserSchema, // 충돌 방지를 위해 이름 변경
+  userPreferencesSchema,
+  userStateSchema,
+} from "./models/store";
 
-// 문의 관련 타입 추가
-export * from "./models/inquiry";
-
-// 수업 가용성 관련 타입
+// 수업 가용성 관련 타입 (models 폴더에 없는 독립적인 타입)
 export interface ScheduleWithAvailability {
   id: string;
   class_id: string;
@@ -37,104 +112,4 @@ export interface ScheduleWithAvailability {
   cancellation_reason?: string;
   instructor_id?: string;
   location?: string;
-}
-
-// 기본 타입 (이전 정의)
-export interface User {
-  id: string;
-  email: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface UserProfile {
-  id: string;
-  user_id: string;
-  full_name: string;
-  avatar_url?: string;
-  phone?: string;
-  address?: string;
-  membership_level: "REGULAR" | "SILVER" | "GOLD" | "VIP";
-  role: "user" | "admin";
-  created_at: string;
-  updated_at: string;
-}
-
-export interface Class {
-  id: string;
-  title: string;
-  description: string;
-  price: number;
-  capacity: number;
-  duration: number;
-  category: string;
-  type: "REGULAR" | "SPECIAL" | "WORKSHOP" | "EVENT";
-  image_url?: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface ClassSchedule {
-  id: string;
-  class_id: string;
-  date: string;
-  duration: number;
-  capacity: number;
-  remaining_seats: number;
-  is_cancelled: boolean;
-  classes?: Class;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface Reservation {
-  id: string;
-  user_id: string;
-  class_schedule_id: string;
-  status: "confirmed" | "cancelled" | "attended" | "no-show";
-  student_count: number;
-  total_price: number;
-  payment_method?: string;
-  payment_id?: string;
-  class_schedules?: ClassSchedule;
-  users?: UserProfile;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface Cancellation {
-  id: string;
-  reservation_id: string;
-  cancelled_by_id: string;
-  reason?: string;
-  refund_amount: number;
-  refund_rate: number;
-  refund_status: "pending" | "completed" | "failed";
-  reservations?: Reservation;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface ApiResponse<T> {
-  success: boolean;
-  data?: T;
-  error?: string;
-  message?: string;
-}
-
-export interface PaginatedResponse<T> {
-  data: T[];
-  count: number;
-  page: number;
-  pageSize: number;
-  totalPages: number;
-}
-
-export interface FilterOptions {
-  status?: string;
-  startDate?: string;
-  endDate?: string;
-  searchQuery?: string;
-  category?: string;
-  [key: string]: string | undefined;
 }

@@ -1,15 +1,9 @@
 import React, { useState, useEffect } from "react";
 import Button from "./Button";
 import Card from "./Card";
-import {
-  DynamicFormProps,
-  FormField,
-  FormError,
-  FormTemplate,
-  FileObject,
-  ValidationRule,
-  ConditionalDisplay,
-} from "../types/form";
+import { ConditionalDisplay, FileObject, FormFieldExtended } from "@/types/models/form";
+import { FormError } from "@/types/models/form";
+import { DynamicFormProps } from "@/types/models/form";
 
 const DynamicForm: React.FC<DynamicFormProps> = ({
   template,
@@ -107,19 +101,19 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
 
           switch (rule.type) {
             case "minLength":
-              isValid = String(value).length >= rule.value;
+              isValid = String(value).length >= (rule.value as number);
               break;
             case "maxLength":
-              isValid = String(value).length <= rule.value;
+              isValid = String(value).length <= (rule.value as number);
               break;
             case "min":
-              isValid = Number(value) >= rule.value;
+              isValid = Number(value) >= (rule.value as number);
               break;
             case "max":
-              isValid = Number(value) <= rule.value;
+              isValid = Number(value) <= (rule.value as number);
               break;
             case "pattern":
-              isValid = new RegExp(rule.value).test(String(value));
+              isValid = new RegExp(rule.value as string).test(String(value));
               break;
             case "email":
               isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value));
@@ -144,11 +138,10 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
   };
 
   // 조건부 표시 필드 처리
-  const isFieldVisible = (field: FormField): boolean => {
-    const condition = field.conditionalDisplay as ConditionalDisplay;
+  const isFieldVisible = (field: FormFieldExtended): boolean => {
+    if (!field.conditionalDisplay) return true;
 
-    if (!condition) return true;
-
+    const condition = field.conditionalDisplay;
     const dependentValue = formValues[condition.dependsOn];
 
     if (dependentValue === undefined) return false;
@@ -200,7 +193,7 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
   };
 
   // 필드 렌더링
-  const renderField = (field: FormField) => {
+  const renderField = (field: FormFieldExtended) => {
     // 필드가 표시되지 않으면 렌더링 생략
     if (field.conditionalDisplay && !isFieldVisible(field)) {
       return null;

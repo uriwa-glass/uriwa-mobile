@@ -3,8 +3,9 @@ import { format } from "date-fns";
 import { ko } from "date-fns/locale";
 import { getUserActiveSession, getUserSessionHistory } from "../../api/sessionService";
 import { useUserStore } from "../../stores/userStore";
-import type { UserSession, SessionTransaction } from "../../types";
 import LoadingSpinner from "../common/LoadingSpinner";
+import { UserSession } from "@/types/models/session";
+import { SessionTransaction } from "@/types/models/session";
 
 interface MySessionsProps {
   limit?: number;

@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../../api/supabaseClient";
 import Layout from "../../components/Layout";
 import Button, { ButtonProps } from "../../components/Button";
-import type { FormTemplate } from "../../types/form";
+import { FormTemplate } from "@/types/models/form";
 
 interface ConfirmDialogState {
   isOpen: boolean;

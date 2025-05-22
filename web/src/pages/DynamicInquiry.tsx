@@ -1,22 +1,19 @@
-import React, { useState, useEffect, FormEvent } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../api/supabaseClient";
 import Layout from "../components/Layout";
 import DynamicForm from "../components/DynamicForm";
-import type { FormField, ValidationRule, FormTemplate } from "../types/form";
+import { FormFieldExtended, FormTemplateExtended } from "@/types/models/form";
 
 // 타입 정의
 interface InquiryTemplate {
   id: string;
   title: string;
   description: string;
-  isActive: boolean;
-  fields: FormField[];
-  version: number;
-  notificationEmails: string[];
-  createdAt: string;
-  updatedAt: string;
   is_active: boolean;
+  fields: FormFieldExtended[];
+  version: number;
+  notification_emails: string[];
   created_at: string;
   updated_at: string;
 }
@@ -68,13 +65,10 @@ const DynamicInquiry = () => {
         id: data.id,
         title: data.title,
         description: data.description || "",
-        isActive: data.is_active,
-        fields: data.fields as FormField[],
-        version: data.version,
-        notificationEmails: data.notification_emails || [],
-        createdAt: data.created_at,
-        updatedAt: data.updated_at,
         is_active: data.is_active,
+        fields: data.fields as FormFieldExtended[],
+        version: data.version,
+        notification_emails: data.notification_emails || [],
         created_at: data.created_at,
         updated_at: data.updated_at,
       });
@@ -92,19 +86,22 @@ const DynamicInquiry = () => {
   }, []);
 
   const createDefaultTemplate = () => {
-    const defaultFields: FormField[] = [
+    const defaultFields: FormFieldExtended[] = [
       {
         id: "name",
         type: "text",
         label: "이름",
         placeholder: "이름을 입력해주세요",
+        required: true,
         validation: [{ type: "required", message: "이름을 입력해주세요." }],
+        style: {},
       },
       {
         id: "email",
         type: "email",
         label: "이메일",
         placeholder: "이메일을 입력해주세요",
+        required: true,
         validation: [
           { type: "required", message: "이메일을 입력해주세요." },
           {
@@ -113,72 +110,80 @@ const DynamicInquiry = () => {
             message: "유효한 이메일 주소를 입력해주세요.",
           },
         ],
+        style: {},
       },
       {
         id: "phone",
         type: "phone",
         label: "연락처",
         placeholder: "연락처를 입력해주세요 (010-1234-5678)",
+        required: true,
         validation: [
           { type: "required", message: "연락처를 입력해주세요." },
           { type: "phone", message: "유효한 휴대폰 번호 형식이 아닙니다." },
         ],
+        style: {},
       },
       {
         id: "subject",
         type: "text",
         label: "문의 제목",
         placeholder: "문의 제목을 입력해주세요",
+        required: true,
         validation: [
           { type: "required", message: "문의 제목을 입력해주세요." },
           { type: "maxLength", value: 100, message: "문의 제목은 100자 이내로 입력해주세요." },
         ],
+        style: {},
       },
       {
         id: "category",
         type: "select",
         label: "문의 유형",
         placeholder: "문의 유형을 선택해주세요",
+        required: true,
         options: [
-          { label: "수업 관련 문의", value: "class" },
-          { label: "결제 관련 문의", value: "payment" },
-          { label: "일정 관련 문의", value: "schedule" },
-          { label: "기타 문의", value: "other" },
+          { value: "class", label: "수업 관련 문의" },
+          { value: "payment", label: "결제 관련 문의" },
+          { value: "schedule", label: "일정 관련 문의" },
+          { value: "other", label: "기타 문의" },
         ],
         validation: [{ type: "required", message: "문의 유형을 선택해주세요." }],
+        style: {},
       },
       {
         id: "message",
         type: "textarea",
         label: "문의 내용",
         placeholder: "문의 내용을 자세히 입력해주세요",
+        required: true,
         validation: [
           { type: "required", message: "문의 내용을 입력해주세요." },
           { type: "minLength", value: 10, message: "문의 내용은 최소 10자 이상 입력해주세요." },
         ],
+        style: {},
       },
       {
         id: "contact_preference",
         type: "radio",
         label: "선호하는 연락 방법",
+        required: false,
         options: [
-          { label: "이메일", value: "email" },
-          { label: "전화", value: "phone" },
+          { value: "email", label: "이메일" },
+          { value: "phone", label: "전화" },
         ],
         defaultValue: "email",
+        style: {},
       },
     ];
     setInquiryTemplate({
       id: "default-inquiry-form",
       title: "기본 문의 양식",
       description: "서비스 관련 궁금한 점이나 불편한 점을 알려주세요.",
-      isActive: true,
+      is_active: true,
       fields: defaultFields,
       version: 1,
-      notificationEmails: [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      is_active: true,
+      notification_emails: [],
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     });
@@ -266,6 +271,21 @@ const DynamicInquiry = () => {
     );
   }
 
+  // FormTemplate 타입으로 변환하기 위한 필드 매핑
+  const convertToFormTemplateExtended = (): FormTemplateExtended => {
+    return {
+      id: inquiryTemplate.id,
+      title: inquiryTemplate.title,
+      description: inquiryTemplate.description,
+      fields: inquiryTemplate.fields,
+      is_active: inquiryTemplate.is_active,
+      created_at: inquiryTemplate.created_at,
+      updated_at: inquiryTemplate.updated_at,
+      submitButtonText: "문의 제출하기",
+      cancelButtonText: "취소",
+    };
+  };
+
   return (
     <Layout title={inquiryTemplate.title}>
       <div className="p-4 md:p-6">
@@ -275,14 +295,7 @@ const DynamicInquiry = () => {
           </p>
         )}
         <DynamicForm
-          template={
-            {
-              ...inquiryTemplate,
-              is_active: inquiryTemplate.isActive,
-              created_at: inquiryTemplate.createdAt,
-              updated_at: inquiryTemplate.updatedAt,
-            } as unknown as FormTemplate
-          }
+          template={convertToFormTemplateExtended()}
           onSubmit={handleSubmit}
           onCancel={handleCancel}
           isLoading={isSubmitting}

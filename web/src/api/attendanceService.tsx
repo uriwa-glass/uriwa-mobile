@@ -1,5 +1,5 @@
+import { ReservationStatus } from "@/types/models/reservation";
 import { supabase } from "./supabaseClient";
-import { ReservationStatus, ApiResponse } from "../types";
 
 export interface AttendanceResult {
   success: boolean;

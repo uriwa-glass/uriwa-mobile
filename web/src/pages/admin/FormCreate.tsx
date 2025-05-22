@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "../../api/supabaseClient";
 import Layout from "../../components/Layout";
 import Button from "../../components/Button";
-import type { FormField } from "../../types/form"; // FormField 타입 import
+import { FormField } from "@/types/models/form";
 
 // 타입 정의
 interface FormDataState {

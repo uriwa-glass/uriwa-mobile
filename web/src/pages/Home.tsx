@@ -9,13 +9,13 @@ import { useAuth } from "../contexts/AuthContext";
 const Home = () => {
   const { isMobile } = useResponsive();
   const navigate = useNavigate();
-  const { user, profile, loading, initialized } = useAuth();
+  const { user, profile, loading, initialized, isLoggedIn } = useAuth();
 
   // 디버깅을 위한 콘솔 로그 추가
-  console.log("Auth state:", { user, profile, loading, initialized });
+  console.log("Auth state:", { user, profile, loading, initialized, isLoggedIn });
 
-  // isLoggedIn 변수는 유지하되, 로딩 조건 변경
-  const isLoggedIn = !!user && !!profile;
+  // isLoggedIn은 이제 AuthContext에서 가져옴
+  console.log(`@@@ isLoggedIn : `, isLoggedIn);
 
   // 초기화가 완료되지 않았을 때만 로딩 화면 표시 (loading은 다른 작업 중에도 true가 될 수 있음)
   if (!initialized) {
@@ -41,9 +41,6 @@ const Home = () => {
               ? `환영합니다, ${profile.full_name}님!`
               : "환영합니다, URIWA"}
           </h1>
-          <p className="text-[#A1A4B2] text-sm mb-4">
-            프로젝트 관리 및 자동화를 위한 Task Master 기반 모바일 앱입니다
-          </p>
         </div>
 
         {/* 주요 기능 섹션 */}

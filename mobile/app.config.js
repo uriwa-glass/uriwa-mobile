@@ -1,4 +1,12 @@
 import "dotenv/config";
+import { config } from "dotenv";
+import { resolve } from "path";
+
+// .env.local 파일 로드 (우선순위 더 높게)
+config({ path: resolve(__dirname, "../.env.local") });
+
+// .env.mobile 파일 로드 (모바일 기기용 IP 주소 설정)
+config({ path: resolve(__dirname, "../.env.mobile") });
 
 export default {
   name: "mobile",

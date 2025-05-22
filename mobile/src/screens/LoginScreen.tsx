@@ -14,7 +14,7 @@ import {
 import { useNavigation } from "@react-navigation/native";
 import Svg, { Path, Rect } from "react-native-svg";
 import * as WebBrowser from "expo-web-browser";
-import supabase from "../config/supabase";
+import supabase, { authClient } from "../config/supabase";
 import authHelper from "../utils/authHelper";
 import { handleAPIError } from "../api";
 import theme from "../config/theme"; // 테마 불러오기
@@ -257,8 +257,9 @@ const LoginScreen: React.FC = () => {
         };
       }
 
-      // OAuth 인증 URL 가져오기
-      const { data, error } = await supabase.auth.signInWithOAuth(providerOptions);
+      // OAuth 인증 URL 가져오기 - 항상 인증 클라이언트 사용
+      console.log("Using authClient for OAuth sign-in");
+      const { data, error } = await authClient.auth.signInWithOAuth(providerOptions);
 
       if (error) {
         console.error("OAuth 로그인 오류:", error);
@@ -278,21 +279,34 @@ const LoginScreen: React.FC = () => {
 
       // 인증 성공 시
       if (authResult.type === "success") {
-        // 현재 사용자 정보 가져오기
-        const { data: userData, error: userError } = await supabase.auth.getUser();
+        console.log("Auth session successful - getting user data");
+
+        // 현재 사용자 정보 가져오기 (authClient 사용)
+        const { data: userData, error: userError } = await authClient.auth.getUser();
 
         if (userError) {
+          console.error("Failed to get user after auth:", userError);
           throw userError;
         }
 
         if (userData?.user) {
-          // 세션 정보 가져오기
-          const { data: sessionData } = await supabase.auth.getSession();
+          console.log("User authenticated successfully with OAuth");
+
+          // 세션 정보 가져오기 (authClient 사용)
+          const { data: sessionData } = await authClient.auth.getSession();
 
           if (sessionData?.session) {
+            console.log("Session obtained successfully");
+
             // 인증 토큰 및 사용자 정보 저장
             await authHelper.setAuthToken(sessionData.session.access_token);
             await authHelper.setUserData(userData.user);
+
+            // 데이터 클라이언트에도 동일한 세션 설정
+            await supabase.auth.setSession({
+              access_token: sessionData.session.access_token,
+              refresh_token: sessionData.session.refresh_token,
+            });
 
             // 메인 화면으로 이동
             navigation.reset({
@@ -311,7 +325,17 @@ const LoginScreen: React.FC = () => {
       }
     } catch (error: any) {
       console.error("소셜 로그인 오류:", error);
-      const errorMsg = handleAPIError(error);
+
+      // 오류 메시지 향상
+      let errorMsg = handleAPIError(error);
+
+      // 구체적인 오류 메시지 파싱
+      if (error.message && error.message.includes("provider is not enabled")) {
+        errorMsg = `${provider} 로그인이 활성화되지 않았습니다. 관리자에게 문의하세요.`;
+      } else if (error.message && error.message.includes("network")) {
+        errorMsg = "네트워크 연결을 확인해주세요.";
+      }
+
       setErrorMessage(`${provider} 로그인에 실패했습니다: ${errorMsg}`);
     } finally {
       setIsLoading(false);

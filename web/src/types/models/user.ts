@@ -1,4 +1,5 @@
 import { AuthChangeEvent, Session, User as SupabaseUser } from "@supabase/supabase-js";
+import { z } from "zod";
 
 // 사용자 기본 타입
 export interface User extends SupabaseUser {
@@ -12,32 +13,45 @@ export interface UserMetadata {
   provider?: string;
 }
 
-// 사용자 프로필
-export interface UserProfile {
-  id: string;
-  user_id: string;
-  full_name: string;
-  avatar_url?: string;
-  phone?: string;
-  address?: string;
-  membership_level: MembershipLevel;
-  role: UserRole;
-  created_at: string;
-  updated_at: string;
-  session_count?: number;
-  notes?: string;
-  email_notifications?: boolean;
-  push_notifications?: boolean;
-  marketing_notifications?: boolean;
-  class_reminders?: boolean;
-  community_notifications?: boolean;
-}
-
 // 회원 등급
-export type MembershipLevel = "REGULAR" | "SILVER" | "GOLD" | "VIP";
+export type MembershipLevel = "FREE" | "REGULAR" | "PREMIUM" | "VIP";
 
 // 사용자 역할
-export type UserRole = "user" | "admin" | "instructor";
+export type UserRole = "user" | "admin" | "moderator";
+
+// Zod 스키마로 사용자 프로필 정의
+export const membershipLevelSchema = z.enum(["REGULAR", "SILVER", "GOLD", "VIP"]);
+export const userRoleSchema = z.enum(["user", "admin", "instructor"]);
+
+// 프로필 생성을 위한 스키마 (필수 필드만)
+export const createUserProfileSchema = z.object({
+  id: z.string(),
+  user_id: z.string().optional(),
+  display_name: z.string(),
+  full_name: z.string().optional(),
+  avatar_url: z.string().optional(),
+  phone: z.string().optional(),
+  address: z.string().optional(),
+  membership_level: membershipLevelSchema.default("REGULAR").optional(),
+  role: userRoleSchema.default("user"),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+
+// 전체 사용자 프로필 스키마 (모든 필드 포함)
+export const userProfileSchema = createUserProfileSchema.extend({
+  session_count: z.number().optional(),
+  notes: z.string().optional(),
+  email_notifications: z.boolean().optional(),
+  push_notifications: z.boolean().optional(),
+  marketing_notifications: z.boolean().optional(),
+  class_reminders: z.boolean().optional(),
+  community_notifications: z.boolean().optional(),
+});
+
+// 스키마로부터 타입 추출
+export type CreateUserProfile = z.infer<typeof createUserProfileSchema>;
+export type UserProfile = z.infer<typeof userProfileSchema>;
 
 // 인증 상태
 export interface AuthState {
@@ -47,22 +61,7 @@ export interface AuthState {
   loading: boolean;
   initialized: boolean;
   error: Error | null;
-}
-
-// 인증 컨텍스트
-export interface AuthContextType {
-  user: User | null;
-  profile: UserProfile | null;
-  session: Session | null;
-  loading: boolean;
-  initialized: boolean;
-  error: Error | null;
-  signIn: (provider: string) => Promise<void>;
-  signInWithEmailPassword: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, metadata?: UserMetadata) => Promise<void>;
-  signOut: () => Promise<void>;
-  refreshSession: () => Promise<void>;
-  updateProfile: (data: Partial<UserProfile>) => Promise<void>;
+  isLoggedIn: boolean;
 }
 
 // 인증 변경 핸들러

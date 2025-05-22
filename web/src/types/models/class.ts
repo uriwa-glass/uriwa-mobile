@@ -1,85 +1,110 @@
-// 수업 기본 타입
-export interface Class {
-  id: string;
-  title: string;
-  description: string;
-  price: number;
-  capacity: number;
-  duration: number;
-  category: string;
-  type: ClassType;
-  image_url?: string;
-  instructor_id?: string;
-  location?: string;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-}
+import { z } from "zod";
 
-// 수업 유형
-export type ClassType = "REGULAR" | "SPECIAL" | "WORKSHOP" | "EVENT";
+// 수업 유형 스키마
+export const classTypeSchema = z.enum(["REGULAR", "SPECIAL", "WORKSHOP", "EVENT"]);
+export type ClassType = z.infer<typeof classTypeSchema>;
 
-// 수업 카테고리
-export type ClassCategory = "YOGA" | "PILATES" | "FITNESS" | "DANCE" | "MEDITATION" | "OTHER";
+// 수업 카테고리 스키마
+export const classCategorySchema = z.enum([
+  "YOGA",
+  "PILATES",
+  "FITNESS",
+  "DANCE",
+  "MEDITATION",
+  "OTHER",
+]);
+export type ClassCategory = z.infer<typeof classCategorySchema>;
 
-// 수업 난이도
-export type ClassLevel = "BEGINNER" | "INTERMEDIATE" | "ADVANCED" | "ALL";
+// 수업 난이도 스키마
+export const classLevelSchema = z.enum(["BEGINNER", "INTERMEDIATE", "ADVANCED", "ALL"]);
+export type ClassLevel = z.infer<typeof classLevelSchema>;
 
-// 수업 일정
-export interface ClassSchedule {
-  id: string;
-  class_id: string;
-  date: string;
-  duration: number;
-  capacity: number;
-  remaining_seats: number;
-  is_cancelled: boolean;
-  cancellation_reason?: string;
-  instructor_id?: string;
-  location?: string;
-  classes?: Class;
-  created_at: string;
-  updated_at: string;
-}
+// 수업 기본 스키마
+export const classSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  description: z.string(),
+  price: z.number(),
+  capacity: z.number(),
+  duration: z.number(),
+  category: z.string(),
+  type: classTypeSchema,
+  image_url: z.string().optional(),
+  instructor_id: z.string().optional(),
+  location: z.string().optional(),
+  is_active: z.boolean(),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+export type Class = z.infer<typeof classSchema>;
 
-// 수업 가능 여부 응답
-export interface AvailabilityResponse {
-  available: boolean;
-  remaining_seats: number;
-  total_capacity: number;
-  class_id: string;
-  schedule_id: string;
-  message?: string;
-}
+// 수업 일정 스키마
+export const classScheduleSchema = z.object({
+  id: z.string(),
+  class_id: z.string(),
+  date: z.string(),
+  duration: z.number(),
+  capacity: z.number(),
+  remaining_seats: z.number(),
+  is_cancelled: z.boolean(),
+  cancellation_reason: z.string().optional(),
+  instructor_id: z.string().optional(),
+  location: z.string().optional(),
+  classes: classSchema.optional(),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+export type ClassSchedule = z.infer<typeof classScheduleSchema>;
 
-// 수업 필터 옵션
-export interface ClassFilterOptions {
-  category?: ClassCategory;
-  type?: ClassType;
-  level?: ClassLevel;
-  startDate?: string;
-  endDate?: string;
-  minPrice?: number;
-  maxPrice?: number;
-  searchQuery?: string;
-  instructorId?: string;
-  hasAvailability?: boolean;
-}
+// 수업 가능 여부 응답 스키마
+export const availabilityResponseSchema = z.object({
+  available: z.boolean(),
+  remaining_seats: z.number(),
+  total_capacity: z.number(),
+  class_id: z.string(),
+  schedule_id: z.string(),
+  message: z.string().optional(),
+});
+export type AvailabilityResponse = z.infer<typeof availabilityResponseSchema>;
 
-// 수업 정렬 옵션
-export type ClassSortOption = "date-asc" | "date-desc" | "price-asc" | "price-desc" | "popularity";
+// 수업 필터 옵션 스키마
+export const classFilterOptionsSchema = z.object({
+  category: classCategorySchema.optional(),
+  type: classTypeSchema.optional(),
+  level: classLevelSchema.optional(),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+  minPrice: z.number().optional(),
+  maxPrice: z.number().optional(),
+  searchQuery: z.string().optional(),
+  instructorId: z.string().optional(),
+  hasAvailability: z.boolean().optional(),
+});
+export type ClassFilterOptions = z.infer<typeof classFilterOptionsSchema>;
 
-// 수업 일정 그룹 (날짜별)
-export interface ScheduleGroup {
-  date: string;
-  schedules: ClassSchedule[];
-}
+// 수업 정렬 옵션 스키마
+export const classSortOptionSchema = z.enum([
+  "date-asc",
+  "date-desc",
+  "price-asc",
+  "price-desc",
+  "popularity",
+]);
+export type ClassSortOption = z.infer<typeof classSortOptionSchema>;
 
-// 인기 수업
-export interface PopularClass {
-  id: string;
-  title: string;
-  bookings_count: number;
-  average_rating: number;
-  image_url?: string;
-}
+// 수업 일정 그룹 스키마
+export const scheduleGroupSchema = z.object({
+  date: z.string(),
+  schedules: z.array(classScheduleSchema),
+});
+export type ScheduleGroup = z.infer<typeof scheduleGroupSchema>;
+
+// 인기 수업 스키마
+export const popularClassSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  bookings_count: z.number(),
+  average_rating: z.number(),
+  image_url: z.string().optional(),
+});
+export type PopularClass = z.infer<typeof popularClassSchema>;

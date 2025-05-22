@@ -6,7 +6,6 @@ import Layout from "../components/Layout";
 import Button from "../components/Button";
 import { supabase } from "../api/supabaseClient";
 import { checkCancellationPolicy, cancelReservation } from "../api/cancellationService";
-import type { StoreReservation as ReservationType } from "../types/stores";
 
 // 동적 Tailwind 클래스 유틸리티 함수 추가
 function statusClass(type: string) {

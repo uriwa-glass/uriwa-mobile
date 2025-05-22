@@ -1,6 +1,12 @@
 import { supabase } from "./supabaseClient";
 import { invalidateScheduleCache, checkReservationAvailability } from "./availabilityService";
-import { Reservation, ClassSchedule, ReservationStatus, ApiResponse } from "../types";
+import {
+  Reservation,
+  ReservationStatus,
+  reservationStatusSchema,
+} from "../types/models/reservation";
+import { ClassSchedule } from "../types/models/class";
+import { Schedule, StoreReservation } from "../types/models/store";
 import { API_BASE_URL } from "../config";
 
 /**

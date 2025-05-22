@@ -1,5 +1,12 @@
 import { create } from "zustand";
-import { ReservationState, StoreReservation, Schedule, PaymentStatusType } from "../types/stores";
+import {
+  ReservationState,
+  StoreReservation,
+  Schedule,
+  PaymentStatusType,
+  scheduleSchema,
+  paymentStatusTypeSchema,
+} from "../types/models/store";
 import {
   createReservation as apiCreateReservation,
   getUserReservations as apiGetUserReservations,
@@ -8,7 +15,8 @@ import {
   ReservationResult,
   ReservationWithSchedule,
 } from "../api/reservationService"; // API 함수 임포트
-import { Reservation, ClassSchedule } from "../types";
+import { Reservation } from "../types/models/reservation";
+import { ClassSchedule } from "../types/models/class";
 
 interface ReservationActions {
   fetchReservationHistory: (userId: string) => Promise<void>;
@@ -20,7 +28,7 @@ interface ReservationActions {
 }
 
 // API 응답을 StoreReservation 형식으로 변환하는 유틸리티 함수
-const convertToStoreReservation = (apiReservation: ReservationWithSchedule): StoreReservation => {
+const convertToStoreReservation = (apiReservation: any): StoreReservation => {
   // 결제 상태를 추론하는 함수 (실제 API에 맞게 로직 수정 필요)
   const getPaymentStatus = (status: string): PaymentStatusType => {
     switch (status) {
@@ -40,7 +48,7 @@ const convertToStoreReservation = (apiReservation: ReservationWithSchedule): Sto
   return {
     id: apiReservation.id,
     user_id: apiReservation.user_id,
-    class_schedule_id: apiReservation.class_schedule_id,
+    class_schedule_id: apiReservation.class_schedule_id || apiReservation.schedule_id,
     student_count: apiReservation.student_count || 1,
     total_price: apiReservation.total_price || 0,
     status: apiReservation.status,
@@ -54,7 +62,7 @@ const convertToStoreReservation = (apiReservation: ReservationWithSchedule): Sto
     users: apiReservation.users,
     // 스토어 타입에만 필요한 필드들
     class_id: apiReservation.class_schedules?.class_id || "",
-    schedule_id: apiReservation.class_schedule_id,
+    schedule_id: apiReservation.class_schedule_id || apiReservation.schedule_id,
     metadata: {},
   } as StoreReservation;
 };
@@ -85,7 +93,7 @@ const useReservationStore = create<ReservationState & ReservationActions>((set, 
     const result = await apiCreateReservation(reservationData);
     if (result.success && result.reservation) {
       // API 응답을 StoreReservation 형식으로 변환
-      const storeReservation = convertToStoreReservation(result.reservation as any);
+      const storeReservation = convertToStoreReservation(result.reservation);
       set({
         currentReservation: storeReservation,
         loading: false,

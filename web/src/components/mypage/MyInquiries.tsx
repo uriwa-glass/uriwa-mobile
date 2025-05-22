@@ -4,8 +4,10 @@ import { ko } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
 import { getUserInquiries } from "../../api/inquiryService";
 import { useUserStore } from "../../stores/userStore";
-import { UserInquiry, InquiryStatus, InquiryCategory } from "../../types";
 import LoadingSpinner from "../common/LoadingSpinner";
+import { InquiryCategory } from "@/types/models/inquiry";
+import { InquiryStatus } from "@/types/models/inquiry";
+import { UserInquiry } from "@/types/models/inquiry";
 
 interface MyInquiriesProps {
   limit?: number;

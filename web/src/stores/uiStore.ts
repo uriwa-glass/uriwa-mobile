@@ -1,6 +1,11 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
-import { Notification } from "../types/stores";
+import {
+  Notification,
+  UIState as StoreUIState,
+  notificationSchema,
+  themeSchema,
+} from "../types/models/store";
 import React from "react";
 
 interface UIState {

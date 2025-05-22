@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
-import { LoadingState } from "../types/stores";
+import { LoadingState, userSchema, loadingStateSchema } from "../types/models/store";
 import { User, UserProfile } from "../types/models/user";
 import { supabase } from "../api/supabaseClient";
 
