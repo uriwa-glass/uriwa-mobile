@@ -43,4 +43,7 @@ check_*.sql
 *.temp/
 supabase/migrations_backup/
 supabase/migrations_backup_archive/
-supabase/.temp/ 
+supabase/.temp/
+
+# Supabase configuration with sensitive information
+supabase/config.toml 
