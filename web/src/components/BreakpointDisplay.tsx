@@ -56,7 +56,7 @@ const BreakpointDisplay: React.FC<BreakpointDisplayProps> = ({
       : "bg-purple-500"; // 2xl
 
   return (
-    <div className={`fixed ${positionClass} z-50 flex flex-col items-end`}>
+    <div className={`fixed ${positionClass} z-50 flex flex-col items-end pointer-events-none`}>
       {showDetails && (
         <div className="mb-2 bg-gray-800 text-white text-xs p-2 rounded shadow">
           <div>Width: {width}px</div>

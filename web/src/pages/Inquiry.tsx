@@ -140,7 +140,7 @@ const Inquiry = () => {
     }`;
 
   return (
-    <Layout title="고객 문의">
+    <Layout title="고객 문의" showBackButton={false}>
       <div className="p-5 bg-background-paper mb-4">
         <h2 className="text-lg font-bold text-text-primary mb-2">안내사항</h2>
         <p className="text-md text-text-secondary leading-relaxed">

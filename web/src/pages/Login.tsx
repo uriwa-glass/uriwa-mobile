@@ -76,7 +76,7 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   // Auth context 사용
-  const { user, loading, signInWithEmailPassword, signIn } = useAuth();
+  const { user, loading, error, signInWithEmailPassword, signIn, signInWithKakao } = useAuth();
 
   useEffect(() => {
     // 사용자가 이미 로그인 상태인 경우 홈으로 리디렉션
@@ -84,6 +84,22 @@ const Login = () => {
       navigate("/");
     }
   }, [user, navigate]);
+
+  // AuthContext의 에러를 감지하여 표시
+  useEffect(() => {
+    if (error) {
+      const errorMsg = error.message;
+      if (errorMsg.includes("Invalid login credentials")) {
+        setErrorMessage("이메일 또는 비밀번호가 올바르지 않습니다.");
+      } else if (errorMsg.includes("Email not confirmed")) {
+        setErrorMessage("이메일 인증이 완료되지 않았습니다. 이메일을 확인해주세요.");
+      } else if (errorMsg.includes("Too many requests")) {
+        setErrorMessage("로그인 시도가 너무 많습니다. 잠시 후 다시 시도해주세요.");
+      } else {
+        setErrorMessage(errorMsg);
+      }
+    }
+  }, [error]);
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -112,24 +128,33 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      await signIn(provider);
+      if (provider === "kakao") {
+        await signInWithKakao();
+      } else {
+        await signIn(provider);
+      }
       // OAuth 리디렉션이 발생하기 때문에 여기서는 추가 처리가 필요 없습니다.
     } catch (error) {
       console.error(`${provider} 로그인 실패:`, error);
 
       let errorMsg = `${provider} 로그인에 실패했습니다. `;
 
-      // 개발 환경에서 소셜 로그인 관련 안내 메시지
-      if (
-        process.env.NODE_ENV === "development" &&
-        error instanceof Error &&
-        (error.message.includes("provider is not enabled") ||
-          error.message.includes("활성화되어 있지 않습니다"))
-      ) {
-        errorMsg +=
-          "개발 환경에서는 소셜 로그인을 위해 별도 설정이 필요합니다. 이메일 로그인을 이용해주세요.";
-      } else {
+      // 카카오 로그인 에러 처리
+      if (provider === "kakao") {
         errorMsg += error instanceof Error ? error.message : "다시 시도해주세요.";
+      } else {
+        // 개발 환경에서 소셜 로그인 관련 안내 메시지
+        if (
+          process.env.NODE_ENV === "development" &&
+          error instanceof Error &&
+          (error.message.includes("provider is not enabled") ||
+            error.message.includes("활성화되어 있지 않습니다"))
+        ) {
+          errorMsg +=
+            "개발 환경에서는 소셜 로그인을 위해 별도 설정이 필요합니다. 이메일 로그인을 이용해주세요.";
+        } else {
+          errorMsg += error instanceof Error ? error.message : "다시 시도해주세요.";
+        }
       }
 
       setErrorMessage(errorMsg);
@@ -148,26 +173,11 @@ const Login = () => {
     );
   }
 
-  // 개발 환경 여부 확인
-  const isDevelopment = process.env.NODE_ENV === "development";
-
   return (
     <Layout title="로그인" showBackButton={true} noPadding={false}>
       <ResponsiveContainer fluid={isMobile} center>
         <div className="w-full max-w-md mx-auto">
           <h1 className="text-[#3F414E] font-bold text-2xl mb-6 text-center">URIWA 로그인</h1>
-
-          {/* 개발 환경 안내 메시지 */}
-          {isDevelopment && (
-            <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded mb-4">
-              <p className="font-bold">개발 환경 정보</p>
-              <p>
-                소셜 로그인 시도 시 오류가 발생할 수 있습니다. 소셜 로그인을 위해서는 로컬
-                Supabase에서 OAuth 제공자 설정이 필요합니다.
-              </p>
-              <p className="mt-1 text-sm">테스트 계정: test@example.com / password123</p>
-            </div>
-          )}
 
           {/* 에러 메시지 표시 */}
           {errorMessage && (

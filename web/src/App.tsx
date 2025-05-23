@@ -44,6 +44,7 @@ import MySessions from "./components/mypage/MySessions";
 // 페이지 컴포넌트 - 코드 스플리팅
 const Signup = lazy(() => import("./pages/Signup"));
 const AuthCallback = lazy(() => import("./pages/AuthCallback"));
+const KakaoCallback = lazy(() => import("./pages/auth/KakaoCallback"));
 
 // 로딩 화면 컴포넌트
 const LoadingScreen = lazy(() => import("./components/LoadingScreen"));
@@ -100,7 +101,7 @@ const ProtectedRoute = ({ children, adminOnly = false }: ProtectedRouteProps) =>
     // 폴백 UI가 활성화된 경우 사용자에게 문제 알림
     if (showFallback) {
       return (
-        <div className="flex justify-center items-center h-screen">
+        <div className="flex mx-4 justify-center items-center h-screen">
           <div className="text-center max-w-md mx-auto p-6 bg-white rounded-lg shadow-lg">
             <div className="text-red-500 text-5xl mb-4">⚠️</div>
             <h2 className="text-xl font-bold mb-4">연결 문제가 발생했습니다</h2>
@@ -177,7 +178,7 @@ const PublicRoute = ({ children, restrictIfAuth = false }: PublicRouteProps) => 
     // 폴백 UI가 활성화된 경우 사용자에게 문제 알림
     if (showFallback) {
       return (
-        <div className="flex justify-center items-center h-screen">
+        <div className="flex mx-4  justify-center items-center h-screen">
           <div className="text-center max-w-md mx-auto p-6 bg-white rounded-lg shadow-lg">
             <div className="text-red-500 text-5xl mb-4">⚠️</div>
             <h2 className="text-xl font-bold mb-4">연결 문제가 발생했습니다</h2>
@@ -261,6 +262,19 @@ const AppRoutes = () => {
               fallback={<div className="flex justify-center items-center h-screen">로딩 중...</div>}
             >
               <AuthCallback />
+            </Suspense>
+          </PublicRoute>
+        }
+      />
+
+      <Route
+        path="/kakao/callback"
+        element={
+          <PublicRoute>
+            <Suspense
+              fallback={<div className="flex justify-center items-center h-screen">로딩 중...</div>}
+            >
+              <KakaoCallback />
             </Suspense>
           </PublicRoute>
         }
@@ -440,15 +454,7 @@ const App = () => {
           <Suspense
             fallback={<div className="flex justify-center items-center h-screen">로딩 중...</div>}
           >
-            <div className="App">
-              {/* 네비게이션 바 추가 */}
-              <NavigationBar />
-
-              {/* 네비게이션 바의 위치에 따라 콘텐츠 패딩 조정 */}
-              <div className="pb-16 lg:pl-20">
-                <AppRoutes />
-              </div>
-            </div>
+            <AppContent />
           </Suspense>
 
           {/* 환경 변수 확인 컴포넌트 */}
@@ -462,6 +468,29 @@ const App = () => {
         </AuthProvider>
       </ThemeProvider>
     </Router>
+  );
+};
+
+// 내비게이션 바의 표시 여부를 결정하기 위한 컴포넌트
+const AppContent = () => {
+  const location = useLocation();
+
+  // 네비게이션 바를 표시하지 않을 페이지 목록
+  const hideNavPaths = ["/login", "/signup"];
+
+  // 현재 경로가 네비게이션 바를 숨겨야 하는 경로인지 확인
+  const shouldHideNav = hideNavPaths.some((path) => location.pathname === path);
+
+  return (
+    <div className="App">
+      {/* 네비게이션 바를 조건부로 표시 */}
+      {!shouldHideNav && <NavigationBar />}
+
+      {/* 네비게이션 바의 위치에 따라 콘텐츠 패딩 조정 */}
+      <div className={!shouldHideNav ? "pb-16 lg:pl-20" : ""}>
+        <AppRoutes />
+      </div>
+    </div>
   );
 };
 

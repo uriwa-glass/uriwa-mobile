@@ -109,19 +109,30 @@ const NavigationBar: React.FC = () => {
     navigate("/mypage");
   };
 
+  // 네비게이션 아이템의 활성화 상태를 확인하는 함수
+  const isActiveItem = (itemPath: string) => {
+    if (itemPath === "/") {
+      // 홈 경로는 정확히 일치해야 함
+      return location.pathname === "/";
+    } else {
+      // 다른 경로는 startsWith 사용
+      return location.pathname.startsWith(itemPath);
+    }
+  };
+
   // 모바일용 하단 네비게이션 바
   if (isMobile) {
     return (
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50">
-        <div className="flex justify-around items-center py-2">
+        <div className="flex items-center">
           {filteredItems.map((item, index) => {
             if (item.path === "/mypage" && isAuthenticated && profile?.avatar_url) {
               return (
                 <Link
                   key={index}
                   to={item.path}
-                  className={`flex flex-col items-center p-2 ${
-                    location.pathname.startsWith(item.path) ? "text-[#FF7648]" : "text-gray-500"
+                  className={`flex-1 flex flex-col items-center py-2 px-1 ${
+                    isActiveItem(item.path) ? "text-[#FF7648]" : "text-gray-500"
                   }`}
                 >
                   <img src={profile.avatar_url} alt="profile" className="w-6 h-6 rounded-full" />
@@ -133,8 +144,8 @@ const NavigationBar: React.FC = () => {
               <Link
                 key={index}
                 to={item.path}
-                className={`flex flex-col items-center p-2 ${
-                  location.pathname.startsWith(item.path) ? "text-[#FF7648]" : "text-gray-500"
+                className={`flex-1 flex flex-col items-center py-2 px-1 ${
+                  isActiveItem(item.path) ? "text-[#FF7648]" : "text-gray-500"
                 }`}
               >
                 <div className="text-xl">{item.icon}</div>
@@ -142,15 +153,6 @@ const NavigationBar: React.FC = () => {
               </Link>
             );
           })}
-
-          {isAuthenticated ? (
-            <button onClick={handleLogout} className="flex flex-col items-center p-2 text-gray-500">
-              <div className="text-xl">
-                <IconWrapper icon={FaSignOutAlt} />
-              </div>
-              <span className="text-xs mt-1">로그아웃</span>
-            </button>
-          ) : null}
         </div>
       </div>
     );
@@ -159,38 +161,33 @@ const NavigationBar: React.FC = () => {
   // 데스크톱용 사이드 네비게이션 바
   return (
     <div className="fixed left-0 top-0 bottom-0 w-16 bg-white border-r border-gray-200 z-50 flex flex-col items-center pt-4">
-      <div className="mb-4">
-        <Link to="/">
-          <SimpleIconButton className="bg-[#FF7648] hover:bg-[#E85A2A]">
-            <IconWrapper icon={FaHome} className="text-white" size={18} />
-          </SimpleIconButton>
-        </Link>
-      </div>
-
       <div className="flex flex-col space-y-6 mt-6 flex-grow">
-        {filteredItems
-          .filter((item) => item.path !== "/mypage")
-          .map((item, index) => (
+        {filteredItems.map((item, index) => {
+          // 마이페이지는 하단에 따로 표시
+          if (item.path === "/mypage") return null;
+
+          return (
             <Link
               key={index}
               to={item.path}
               title={item.label}
               className={`flex flex-col items-center ${
-                location.pathname.startsWith(item.path)
-                  ? "text-[#FF7648]"
-                  : "text-gray-500 hover:text-[#FF7648]"
+                isActiveItem(item.path) ? "text-[#FF7648]" : "text-gray-500 hover:text-[#FF7648]"
               }`}
             >
               <div className="text-xl">{item.icon}</div>
             </Link>
-          ))}
+          );
+        })}
       </div>
 
       <div className="mb-6 flex flex-col items-center space-y-4">
         {isAuthenticated && profile ? (
           <button
             onClick={handleProfileClick}
-            className="flex flex-col items-center text-gray-500 hover:text-[#FF7648]"
+            className={`flex flex-col items-center ${
+              isActiveItem("/mypage") ? "text-[#FF7648]" : "text-gray-500 hover:text-[#FF7648]"
+            }`}
             title="마이페이지"
           >
             {profile.avatar_url ? (

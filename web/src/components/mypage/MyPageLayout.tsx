@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link, Outlet, useLocation } from "react-router-dom";
+import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
   FiUser,
   FiSettings,
@@ -7,9 +7,11 @@ import {
   FiMessageSquare,
   FiBarChart2,
   FiChevronLeft,
+  FiLogOut,
 } from "react-icons/fi";
 import { IconType } from "react-icons";
 import { useUserStore } from "../../stores/userStore";
+import { useAuth } from "../../contexts/AuthContext";
 import LoadingSpinner from "../common/LoadingSpinner";
 import Icon from "../common/Icon";
 
@@ -21,9 +23,12 @@ interface NavItem {
 
 const MyPageLayout = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { userProfile, loading } = useUserStore((state) => state);
+  const { signOut } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   // 스크롤 감지 효과
   useEffect(() => {
@@ -52,6 +57,18 @@ const MyPageLayout = () => {
   const getCurrentPageName = () => {
     const currentItem = navItems.find((item) => location.pathname.startsWith(item.path));
     return currentItem ? currentItem.name : "마이페이지";
+  };
+
+  const handleLogout = async () => {
+    try {
+      setIsLoggingOut(true);
+      await signOut();
+      navigate("/");
+    } catch (error) {
+      console.error("로그아웃 중 오류 발생:", error);
+    } finally {
+      setIsLoggingOut(false);
+    }
   };
 
   if (loading) {
@@ -169,6 +186,18 @@ const MyPageLayout = () => {
                 </li>
               ))}
             </ul>
+
+            {/* 로그아웃 버튼 */}
+            <div className="mt-8 pt-4 border-t border-gray-200">
+              <button
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+                className="flex items-center w-full px-4 py-3 rounded-lg transition-colors duration-200 ease-in-out text-red-600 hover:bg-red-50 hover:text-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Icon icon={FiLogOut} className="w-5 h-5 mr-3" />
+                <span className="font-medium">{isLoggingOut ? "로그아웃 중..." : "로그아웃"}</span>
+              </button>
+            </div>
           </nav>
         </div>
       </aside>

@@ -2,6 +2,8 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase, fetchOrCreateUserProfile } from "../api/supabaseClient";
 import { UserProfile } from "../types/models/user";
+import { encryptPassword } from "../utils/encryption";
+import { initKakaoSDK, loginWithKakao, KakaoUserInfo } from "../utils/kakaoAuth";
 
 // 기본 인증 컨텍스트 타입
 export interface AuthContextType {
@@ -17,6 +19,8 @@ export interface AuthContextType {
   signUp: (email: string, password: string, metadata?: any) => Promise<void>;
   signOut: () => Promise<void>;
   updateProfile: (data: Partial<UserProfile>) => Promise<void>;
+  signInWithKakao: () => Promise<void>;
+  signInWithKakaoUser: (kakaoUserInfo: KakaoUserInfo) => Promise<void>;
 }
 
 // 기본 컨텍스트 생성
@@ -33,6 +37,8 @@ const AuthContext = createContext<AuthContextType>({
   signUp: async () => {},
   signOut: async () => {},
   updateProfile: async () => {},
+  signInWithKakao: async () => {},
+  signInWithKakaoUser: async () => {},
 });
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
@@ -43,6 +49,35 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [error, setError] = useState<Error | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [initialized, setInitialized] = useState(false);
+
+  // 초기화 시 카카오 SDK 초기화
+  useEffect(() => {
+    // 카카오 SDK 초기화를 안전하게 처리
+    const initializeKakaoSDK = () => {
+      console.log("🔵 AuthContext에서 카카오 SDK 초기화 시작");
+
+      if (typeof window !== "undefined" && window.Kakao) {
+        const result = initKakaoSDK();
+        if (result) {
+          console.log("🟢 AuthContext: 카카오 SDK 초기화 성공");
+        } else {
+          console.error("🔴 AuthContext: 카카오 SDK 초기화 실패");
+        }
+      } else {
+        console.log("🟡 AuthContext: 카카오 SDK가 아직 로드되지 않음, 재시도 예정");
+        // 1초 후 재시도
+        setTimeout(initializeKakaoSDK, 1000);
+      }
+    };
+
+    // DOM 로드 완료 후 초기화
+    if (document.readyState === "complete") {
+      initializeKakaoSDK();
+    } else {
+      window.addEventListener("load", initializeKakaoSDK);
+      return () => window.removeEventListener("load", initializeKakaoSDK);
+    }
+  }, []);
 
   // 초기 세션 상태 로드 및 세션 변경 감지
   useEffect(() => {
@@ -67,15 +102,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           setUser(sessionData.session.user);
           setIsLoggedIn(true);
 
-          // 프로필 정보 로드
-          try {
-            const userProfile = await fetchOrCreateUserProfile(sessionData.session.user.id);
-            if (userProfile) {
-              setProfile(userProfile);
-            }
-          } catch (profileError) {
-            console.error("프로필 로드 오류:", profileError);
-          }
+          // 프로필 정보 로드 (비동기적으로 처리, 초기화와 독립적)
+          fetchOrCreateUserProfile(sessionData.session.user.id)
+            .then((userProfile) => {
+              if (userProfile) {
+                setProfile(userProfile);
+              }
+            })
+            .catch((profileError) => {
+              console.error("프로필 로드 오류:", profileError);
+            });
         } else {
           console.log("유효한 세션 없음");
           setUser(null);
@@ -86,7 +122,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       } catch (err) {
         console.error("인증 상태 초기화 중 오류:", err);
         setError(err instanceof Error ? err : new Error(String(err)));
+        // 세션 로드 실패 시에도 초기화 완료로 처리
+        setUser(null);
+        setSession(null);
+        setProfile(null);
+        setIsLoggedIn(false);
       } finally {
+        // 항상 초기화 완료로 설정
         setLoading(false);
         setInitialized(true);
       }
@@ -101,23 +143,32 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser(newSession.user);
         setIsLoggedIn(true);
 
-        // 프로필 정보 로드
-        try {
-          const userProfile = await fetchOrCreateUserProfile(newSession.user.id);
-          if (userProfile) {
-            setProfile(userProfile);
-          }
-        } catch (profileError) {
-          console.error("프로필 로드 오류:", profileError);
-        }
+        // 로그인 완료 시 즉시 초기화 완료로 설정 (프로필 로딩과 분리)
+        setInitialized(true);
+
+        // 프로필 정보 로드 (비동기적으로 처리, 초기화와 독립적)
+        fetchOrCreateUserProfile(newSession.user.id)
+          .then((userProfile) => {
+            if (userProfile) {
+              setProfile(userProfile);
+            }
+          })
+          .catch((profileError) => {
+            console.error("프로필 로드 오류:", profileError);
+          });
       } else if (event === "SIGNED_OUT") {
         setUser(null);
         setSession(null);
         setProfile(null);
         setIsLoggedIn(false);
+        setInitialized(true);
       } else if (event === "TOKEN_REFRESHED" && newSession) {
         setSession(newSession);
         setUser(newSession.user);
+        setInitialized(true);
+      } else if (event === "INITIAL_SESSION") {
+        // 초기 세션 로드 시에도 초기화 완료로 설정
+        setInitialized(true);
       }
     });
 
@@ -138,8 +189,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       // 로컬 개발 환경에서 콜백 URL 설정
       const isDev = process.env.NODE_ENV === "development";
-      const isLocalhost =
-        window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
 
       // 고정 리디렉션 URL 사용
       // 중요: 이 URL은 구글 콘솔에 등록된 URI와 정확히 일치해야 함
@@ -201,9 +250,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setLoading(true);
       console.log(`이메일 로그인 시작: ${email}`);
 
+      // 비밀번호 암호화
+      const encryptedPassword = encryptPassword(password);
+
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
-        password,
+        password: encryptedPassword,
       });
 
       if (error) throw error;
@@ -223,9 +275,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setLoading(true);
       console.log(`회원가입 시작: ${email}`);
 
+      // 비밀번호 암호화
+      const encryptedPassword = encryptPassword(password);
+
       const { data, error } = await supabase.auth.signUp({
         email,
-        password,
+        password: encryptedPassword,
         options: {
           data: metadata,
         },
@@ -298,6 +353,167 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  // 카카오 로그인
+  const signInWithKakao = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      console.log("🔵 카카오 로그인 시작");
+
+      // 카카오 SDK 초기화 확인
+      if (!window.Kakao || !window.Kakao.isInitialized()) {
+        console.log("🔴 카카오 SDK 초기화 중...");
+        initKakaoSDK();
+        await new Promise((resolve) => setTimeout(resolve, 1000)); // 1초 대기
+      }
+
+      if (!window.Kakao || !window.Kakao.isInitialized()) {
+        throw new Error("카카오 SDK 초기화에 실패했습니다.");
+      }
+
+      console.log("🟢 카카오 SDK 초기화 완료");
+
+      // 카카오 사용자 정보 가져오기
+      console.log("🔵 카카오 사용자 정보 요청 중...");
+      const kakaoUser = await loginWithKakao();
+      console.log("🟢 카카오 사용자 정보 수신:", kakaoUser);
+
+      if (!kakaoUser || !kakaoUser.id) {
+        throw new Error("카카오 사용자 정보를 가져올 수 없습니다.");
+      }
+
+      // 이메일 확인
+      const email = kakaoUser.kakao_account?.email;
+      if (!email) {
+        throw new Error(
+          "카카오 계정에서 이메일 정보를 가져올 수 없습니다. 카카오 계정 설정에서 이메일을 공개로 설정해주세요."
+        );
+      }
+
+      console.log("🟢 카카오 이메일:", email);
+
+      // 카카오 사용자를 위한 임시 비밀번호 생성
+      const tempPassword = `kakao_${kakaoUser.id}_temp_password`;
+      const encryptedTempPassword = encryptPassword(tempPassword);
+      console.log("🟢 임시 비밀번호 생성 완료");
+
+      // 기존 사용자인지 확인 (로그인 시도)
+      console.log("🔵 기존 사용자 확인 중...");
+      try {
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password: encryptedTempPassword,
+        });
+
+        if (signInData?.user && !signInError) {
+          console.log("🟢 기존 카카오 사용자 로그인 성공");
+          return;
+        }
+      } catch (tempError) {
+        console.log("🔵 기존 사용자 아님, 신규 가입 진행");
+      }
+
+      // 새 사용자라면 회원가입
+      console.log("🔵 신규 카카오 사용자 가입 중...");
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password: encryptedTempPassword,
+        options: {
+          data: {
+            full_name: kakaoUser.kakao_account?.profile?.nickname || `카카오사용자${kakaoUser.id}`,
+            avatar_url: kakaoUser.kakao_account?.profile?.profile_image_url,
+            auth_provider: "kakao",
+            kakao_id: kakaoUser.id.toString(),
+          },
+        },
+      });
+
+      if (error) {
+        console.error("🔴 카카오 회원가입 오류:", error);
+        throw error;
+      }
+
+      console.log("🟢 카카오 회원가입 성공:", data);
+    } catch (err) {
+      console.error("🔴 카카오 로그인 실패:", err);
+      setError(err instanceof Error ? err : new Error("카카오 로그인에 실패했습니다."));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 카카오 사용자 정보로 로그인 (콜백에서 사용)
+  const signInWithKakaoUser = async (kakaoUser: KakaoUserInfo) => {
+    try {
+      setLoading(true);
+      setError(null);
+      console.log("🔵 카카오 사용자 정보로 로그인 시작:", kakaoUser);
+
+      if (!kakaoUser || !kakaoUser.id) {
+        throw new Error("카카오 사용자 정보를 가져올 수 없습니다.");
+      }
+
+      // 이메일 확인
+      const email = kakaoUser.kakao_account?.email;
+      if (!email) {
+        throw new Error(
+          "카카오 계정에서 이메일 정보를 가져올 수 없습니다. 카카오 계정 설정에서 이메일을 공개로 설정해주세요."
+        );
+      }
+
+      console.log("🟢 카카오 이메일:", email);
+
+      // 카카오 사용자를 위한 임시 비밀번호 생성
+      const tempPassword = `kakao_${kakaoUser.id}_temp_password`;
+      const encryptedTempPassword = encryptPassword(tempPassword);
+      console.log("🟢 임시 비밀번호 생성 완료");
+
+      // 기존 사용자인지 확인 (로그인 시도)
+      console.log("🔵 기존 사용자 확인 중...");
+      try {
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password: encryptedTempPassword,
+        });
+
+        if (signInData?.user && !signInError) {
+          console.log("🟢 기존 카카오 사용자 로그인 성공");
+          return;
+        }
+      } catch (tempError) {
+        console.log("🔵 기존 사용자 아님, 신규 가입 진행");
+      }
+
+      // 새 사용자라면 회원가입
+      console.log("🔵 신규 카카오 사용자 가입 중...");
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password: encryptedTempPassword,
+        options: {
+          data: {
+            full_name: kakaoUser.kakao_account?.profile?.nickname || `카카오사용자${kakaoUser.id}`,
+            avatar_url: kakaoUser.kakao_account?.profile?.profile_image_url,
+            auth_provider: "kakao",
+            kakao_id: kakaoUser.id.toString(),
+          },
+        },
+      });
+
+      if (error) {
+        console.error("🔴 카카오 회원가입 오류:", error);
+        throw error;
+      }
+
+      console.log("🟢 카카오 회원가입 성공:", data);
+    } catch (err) {
+      console.error("🔴 카카오 사용자 로그인 실패:", err);
+      setError(err instanceof Error ? err : new Error("카카오 로그인에 실패했습니다."));
+      throw err; // 콜백 페이지에서 에러를 처리할 수 있도록 다시 throw
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // 컨텍스트 값
   const value: AuthContextType = {
     user,
@@ -312,6 +528,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     signUp,
     signOut,
     updateProfile,
+    signInWithKakao,
+    signInWithKakaoUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

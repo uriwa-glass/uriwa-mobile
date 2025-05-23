@@ -280,7 +280,7 @@ const Reservation = () => {
 
   if (isLoading) {
     return (
-      <Layout title="수업 예약">
+      <Layout title="수업 예약" showBackButton={false}>
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <div className="inline-block w-10 h-10 border-3 border-gray-200 border-t-primary-main rounded-full animate-spin mb-5"></div>
           <p className="text-text-secondary text-md">수업 정보를 불러오는 중...</p>
@@ -291,7 +291,7 @@ const Reservation = () => {
 
   if (error || !classData) {
     return (
-      <Layout title="수업 예약">
+      <Layout title="수업 예약" showBackButton={false}>
         <div className="flex flex-col items-center justify-center py-16 px-5 text-center">
           <h3 className="text-lg text-error-main mb-2">예약 불가</h3>
           <p className="text-md text-text-secondary mb-5 text-center">
@@ -308,7 +308,7 @@ const Reservation = () => {
   // 예약 불가능한 경우
   if (availableSchedules.length === 0) {
     return (
-      <Layout title="수업 예약">
+      <Layout title="수업 예약" showBackButton={false}>
         <div className="flex flex-col items-center justify-center py-16 px-5 text-center">
           <h3 className="text-lg text-error-main mb-2">예약 불가</h3>
           <p className="text-md text-text-secondary mb-5 text-center">
@@ -323,7 +323,7 @@ const Reservation = () => {
   }
 
   return (
-    <Layout title="예약하기">
+    <Layout title="예약하기" showBackButton={false}>
       <div className="p-4">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
