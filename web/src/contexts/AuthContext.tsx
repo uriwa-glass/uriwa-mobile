@@ -187,18 +187,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setLoading(true);
       console.log(`${provider} 로그인 시작`);
 
-      // 로컬 개발 환경에서 콜백 URL 설정
+      // 환경에 따른 동적 리디렉션 URL 생성
       const isDev = process.env.NODE_ENV === "development";
 
-      // 고정 리디렉션 URL 사용
-      // 중요: 이 URL은 구글 콘솔에 등록된 URI와 정확히 일치해야 함
-      // 127.0.0.1:54321/auth/v1/callback은 직접 Supabase로 리디렉션됨
-      const redirectTo = "http://127.0.0.1:3000/auth/callback";
+      // production에서는 현재 도메인을 사용하고, development에서는 localhost:3000 사용
+      const baseUrl = isDev ? "http://127.0.0.1:3000" : window.location.origin;
+
+      const redirectTo = `${baseUrl}/auth/callback`;
 
       console.log(
         `로그인 환경: ${isDev ? "개발" : "프로덕션"}, 호스트: ${window.location.hostname}`
       );
-      console.log(`로그인 리디렉션 URL(하드코딩): ${redirectTo}`);
+      console.log(`동적 생성된 리디렉션 URL: ${redirectTo}`);
+      console.log(`현재 origin: ${window.location.origin}`);
 
       // 디버깅 정보 출력
       console.log(`Supabase 인증 시도: ${provider}`);
