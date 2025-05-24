@@ -23,6 +23,9 @@ import {
   FaSignOutAlt,
   FaSignInAlt,
   FaUserCircle,
+  FaHammer,
+  FaGraduationCap,
+  FaPalette,
 } from "react-icons/fa";
 
 // 네비게이션 아이템 타입 정의
@@ -53,20 +56,19 @@ const NavigationBar: React.FC = () => {
       icon: <IconWrapper icon={FaHome} />,
     },
     {
-      label: "수업",
-      path: "/classes",
-      icon: <IconWrapper icon={FaBook} />,
+      label: "주문제작",
+      path: "/custom-order",
+      icon: <IconWrapper icon={FaHammer} />,
     },
     {
-      label: "예약",
-      path: "/reservations",
-      icon: <IconWrapper icon={FaCalendarAlt} />,
-      authRequired: true,
+      label: "창업과정",
+      path: "/entrepreneurship",
+      icon: <IconWrapper icon={FaGraduationCap} />,
     },
     {
-      label: "문의",
-      path: "/inquiry",
-      icon: <IconWrapper icon={FaQuestionCircle} />,
+      label: "전시작품",
+      path: "/exhibition",
+      icon: <IconWrapper icon={FaPalette} />,
     },
     {
       label: "마이페이지",

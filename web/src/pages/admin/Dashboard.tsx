@@ -63,8 +63,6 @@ const Dashboard = () => {
   return (
     <Layout title="관리자 대시보드">
       <div className="p-4">
-        <h1 className="text-xl text-text-primary mb-4">관리자 대시보드</h1>
-
         <h2 className="text-lg text-text-primary mt-6 mb-4 pb-2 border-b border-border-light">
           콘텐츠 관리
         </h2>
@@ -79,7 +77,7 @@ const Dashboard = () => {
             </div>
           </Link>
 
-          <Link to="/admin/classes" className={menuCardClasses}>
+          <Link to="/admin/class-management" className={menuCardClasses}>
             <div className={iconContainerClasses}>🏫</div>
             <div className="flex-1">
               <h3 className="text-md mb-1">수업 관리</h3>
@@ -89,7 +87,7 @@ const Dashboard = () => {
             </div>
           </Link>
 
-          <Link to="/admin/inquiries" className={menuCardClasses}>
+          <Link to="/admin/inquiry-management" className={menuCardClasses}>
             <div className={iconContainerClasses}>❓</div>
             <div className="flex-1">
               <h3 className="text-md mb-1">문의 관리</h3>
@@ -97,7 +95,7 @@ const Dashboard = () => {
             </div>
           </Link>
 
-          <Link to="/admin/reservations" className={menuCardClasses}>
+          <Link to="/admin/reservation-management" className={menuCardClasses}>
             <div className={iconContainerClasses}>📅</div>
             <div className="flex-1">
               <h3 className="text-md mb-1">예약 관리</h3>
@@ -135,7 +133,7 @@ const Dashboard = () => {
           시스템 관리
         </h2>
         <div className="flex flex-col gap-3">
-          <Link to="/admin/users" className={menuCardClasses}>
+          <Link to="/admin/user-management" className={menuCardClasses}>
             <div className={iconContainerClasses}>👥</div>
             <div className="flex-1">
               <h3 className="text-md mb-1">사용자 관리</h3>

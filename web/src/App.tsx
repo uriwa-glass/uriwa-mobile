@@ -23,6 +23,11 @@ import CancellationHistory from "./pages/CancellationHistory";
 import ReservationDetail from "./pages/ReservationDetail";
 import NotFound from "./pages/NotFound";
 
+// New Pages - URiWa Reference
+import CustomOrder from "./pages/CustomOrder";
+import Entrepreneurship from "./pages/Entrepreneurship";
+import Exhibition from "./pages/Exhibition";
+
 // MyPage Components
 import MyPageLayout from "./components/mypage/MyPageLayout";
 import ProfilePage from "./pages/mypage/ProfilePage";
@@ -37,6 +42,10 @@ import FormTemplates from "./pages/admin/FormTemplates";
 import FormCreate from "./pages/admin/FormCreate";
 import CancellationManager from "./pages/admin/CancellationManager";
 import CancellationAnalytics from "./pages/admin/CancellationAnalytics";
+import UserManagement from "./pages/admin/UserManagement";
+import ClassManagement from "./pages/admin/ClassManagement";
+import InquiryManagement from "./pages/admin/InquiryManagement";
+import ReservationManagement from "./pages/admin/ReservationManagement";
 
 // MyPage components
 import MySessions from "./components/mypage/MySessions";
@@ -422,6 +431,70 @@ const AppRoutes = () => {
           <ProtectedRoute adminOnly>
             <CancellationAnalytics />
           </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/user-management"
+        element={
+          <ProtectedRoute adminOnly>
+            <UserManagement />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/class-management"
+        element={
+          <ProtectedRoute adminOnly>
+            <ClassManagement />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/inquiry-management"
+        element={
+          <ProtectedRoute adminOnly>
+            <InquiryManagement />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/reservation-management"
+        element={
+          <ProtectedRoute adminOnly>
+            <ReservationManagement />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* New Pages - URiWa Reference */}
+      <Route
+        path="/custom-order"
+        element={
+          <PublicRoute>
+            <CustomOrder />
+          </PublicRoute>
+        }
+      />
+
+      <Route
+        path="/entrepreneurship"
+        element={
+          <PublicRoute>
+            <Entrepreneurship />
+          </PublicRoute>
+        }
+      />
+
+      <Route
+        path="/exhibition"
+        element={
+          <PublicRoute>
+            <Exhibition />
+          </PublicRoute>
         }
       />
 
