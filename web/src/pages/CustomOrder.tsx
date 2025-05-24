@@ -1,9 +1,58 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { FaHammer, FaLightbulb, FaTools, FaEnvelope } from "react-icons/fa";
 import IconWrapper from "../components/IconWrapper";
+import { supabase } from "../api/supabaseClient";
+
+interface PortfolioCase {
+  id: number;
+  title: string;
+  description: string;
+  category: string;
+  image_url?: string;
+  thumbnail_url?: string;
+  client_name?: string;
+  project_duration?: number;
+  difficulty_level: "easy" | "medium" | "hard";
+  materials?: string[];
+  techniques?: string[];
+  price_range?: string;
+  is_featured: boolean;
+  display_order: number;
+  status: "active" | "inactive";
+}
 
 const CustomOrder: React.FC = () => {
+  const [portfolios, setPortfolios] = useState<PortfolioCase[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // 포트폴리오 데이터 불러오기
+  useEffect(() => {
+    const fetchPortfolios = async () => {
+      try {
+        setLoading(true);
+        const { data, error } = await supabase
+          .from("portfolio_cases")
+          .select("*")
+          .eq("status", "active")
+          .order("display_order", { ascending: true })
+          .limit(6); // 최대 6개만 표시
+
+        if (error) {
+          console.error("포트폴리오 조회 오류:", error);
+        } else {
+          setPortfolios(data || []);
+        }
+      } catch (error) {
+        console.error("포트폴리오 데이터 로드 실패:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPortfolios();
+  }, []);
+
   return (
     <div className="min-h-screen bg-gray-50 pb-20 lg:pb-8 lg:pl-16">
       <div className="container mx-auto px-4 py-8 max-w-6xl">
@@ -51,9 +100,12 @@ const CustomOrder: React.FC = () => {
                 단계별 제작 과정 공유
               </li>
             </ul>
-            <button className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-colors">
+            <Link
+              to="/inquiry"
+              className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-colors block text-center"
+            >
               기획 디자인 문의하기
-            </button>
+            </Link>
           </div>
 
           {/* 단순 디자인 */}
@@ -85,9 +137,12 @@ const CustomOrder: React.FC = () => {
                 합리적인 가격
               </li>
             </ul>
-            <button className="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 transition-colors">
+            <Link
+              to="/inquiry"
+              className="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 transition-colors block text-center"
+            >
               단순 디자인 문의하기
-            </button>
+            </Link>
           </div>
         </div>
 
@@ -129,20 +184,56 @@ const CustomOrder: React.FC = () => {
         {/* 포트폴리오 섹션 */}
         <div className="bg-white rounded-lg shadow-lg p-8 mb-12">
           <h2 className="text-2xl font-bold text-gray-800 mb-8 text-center">제작 사례</h2>
-          <div className="grid md:grid-cols-3 gap-6">
-            {[1, 2, 3, 4, 5, 6].map((index) => (
-              <div key={index} className="relative group overflow-hidden rounded-lg">
-                <div className="aspect-square bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
-                  <span className="text-gray-500">사례 {index}</span>
+          {loading ? (
+            <div className="grid md:grid-cols-3 gap-6">
+              {[1, 2, 3, 4, 5, 6].map((index) => (
+                <div key={index} className="relative group overflow-hidden rounded-lg">
+                  <div className="aspect-square bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center animate-pulse">
+                    <span className="text-gray-400">로딩중...</span>
+                  </div>
                 </div>
-                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all duration-300 flex items-center justify-center">
-                  <button className="opacity-0 group-hover:opacity-100 bg-white text-gray-800 px-4 py-2 rounded-lg transition-opacity">
-                    자세히 보기
-                  </button>
+              ))}
+            </div>
+          ) : portfolios.length > 0 ? (
+            <div className="grid md:grid-cols-3 gap-6">
+              {portfolios.map((portfolio) => (
+                <div
+                  key={portfolio.id}
+                  className="relative group overflow-hidden rounded-lg bg-white shadow-md"
+                >
+                  <div className="aspect-square overflow-hidden">
+                    {portfolio.thumbnail_url || portfolio.image_url ? (
+                      <img
+                        src={portfolio.thumbnail_url || portfolio.image_url}
+                        alt={portfolio.title}
+                        className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
+                        <span className="text-gray-500">이미지 없음</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all duration-300 flex items-center justify-center">
+                    <div className="opacity-0 group-hover:opacity-100 text-white text-center px-4 transition-opacity">
+                      <h3 className="text-lg font-bold mb-2">{portfolio.title}</h3>
+                      <p className="text-sm mb-2">{portfolio.category}</p>
+                      {portfolio.description && (
+                        <p className="text-xs line-clamp-2">{portfolio.description}</p>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-gray-500 mb-4">등록된 제작 사례가 아직 없습니다.</p>
+              <p className="text-sm text-gray-400">
+                관리자가 포트폴리오를 등록하면 여기에 표시됩니다.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* 문의하기 섹션 */}

@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import {
   FaGraduationCap,
   FaUserGraduate,
@@ -10,129 +10,176 @@ import {
   FaCalendarAlt,
   FaFire,
   FaCog,
+  FaTimes,
+  FaPhone,
+  FaEnvelope,
 } from "react-icons/fa";
 import IconWrapper from "../components/IconWrapper";
+import { useAuth } from "../contexts/AuthContext";
+import { supabase } from "../api/supabaseClient";
 
 interface Course {
   id: string;
   title: string;
-  level: string;
+  level?: string;
   duration: string;
-  sessions: number;
+  sessions?: number;
   price: string;
   description: string;
-  curriculum: string[];
+  curriculum?: string[];
   prerequisites?: string;
+  category?: string;
+  max_participants?: number;
+  instructor_name?: string;
+  thumbnail_url?: string;
+  image_urls?: string[];
+  completion_works?: string;
+  course_focus?: string;
+  learning_objectives?: string;
+  post_completion_path?: string;
+  detailed_curriculum?: any;
 }
 
 const Entrepreneurship: React.FC = () => {
-  const [selectedCourse, setSelectedCourse] = useState<string>("stained-glass");
+  const { user, profile } = useAuth();
+  const navigate = useNavigate();
+  const [selectedCourse, setSelectedCourse] = useState<string>("스테인드글라스");
+  const [viewingCourse, setViewingCourse] = useState<Course | null>(null);
+  const [showApplicationModal, setShowApplicationModal] = useState(false);
+  const [selectedApplication, setSelectedApplication] = useState<Course | null>(null);
+  const [applicationForm, setApplicationForm] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    motivation: "",
+    experience: "",
+  });
+  const [submitting, setSubmitting] = useState(false);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const stainedGlassCourses: Course[] = [
-    {
-      id: "beginner",
-      title: "초급과정",
-      level: "초급",
-      duration: "4주",
-      sessions: 8,
-      price: "280,000원",
-      description:
-        "스테인드글라스의 기초를 배우는 입문 과정입니다. 유리 커팅부터 기본 기법까지 체계적으로 학습합니다.",
-      curriculum: [
-        "스테인드글라스 역사 및 이론",
-        "유리의 종류와 특성 이해",
-        "기본 도구 사용법",
-        "유리 커팅 기초 기법",
-        "납땜 기초 실습",
-        "간단한 패널 제작",
-        "마감 및 클리닝",
-        "작품 완성 및 평가",
-      ],
-    },
-    {
-      id: "intermediate",
-      title: "중급과정",
-      level: "중급",
-      duration: "6주",
-      sessions: 12,
-      price: "420,000원",
-      description:
-        "초급 과정을 수료한 학습자를 위한 심화 과정입니다. 복잡한 패턴과 고급 기법을 익힙니다.",
-      curriculum: [
-        "복잡한 패턴 디자인",
-        "고급 커팅 기법",
-        "솔더링 심화 과정",
-        "리드라인 활용법",
-        "색상 조합 이론",
-        "중급 작품 제작",
-        "문제 해결 및 수정 기법",
-        "포트폴리오 구성",
-      ],
-      prerequisites: "초급과정 수료",
-    },
-    {
-      id: "advanced",
-      title: "고급과정",
-      level: "고급",
-      duration: "8주",
-      sessions: 16,
-      price: "560,000원",
-      description: "전문 작가 수준의 고급 기법과 창작 능력을 기르는 과정입니다.",
-      curriculum: [
-        "고급 디자인 개발",
-        "3D 패널 제작",
-        "페인팅 기법",
-        "에칭 및 샌드블라스팅",
-        "대형 작품 제작 기법",
-        "상업적 작품 제작",
-        "갤러리 전시 준비",
-        "창업 실무 교육",
-      ],
-      prerequisites: "중급과정 수료",
-    },
-    {
-      id: "selective",
-      title: "선택과정",
-      level: "선택",
-      duration: "유동적",
-      sessions: 999,
-      price: "별도 상담",
-      description: "개인의 관심사와 목표에 따라 맞춤형으로 구성되는 특별 과정입니다.",
-      curriculum: [
-        "개인 프로젝트 지도",
-        "특수 기법 집중 교육",
-        "작품 판매 전략",
-        "갤러리 운영 실무",
-        "해외 기법 도입",
-        "협업 프로젝트 참여",
-        "마스터클래스 참석",
-        "개인 전시회 준비",
-      ],
-      prerequisites: "고급과정 수료 또는 동등 수준",
-    },
-  ];
+  // 수업 데이터 로드
+  useEffect(() => {
+    fetchCourses();
+  }, [selectedCourse]);
 
-  const glassKilnCourse: Course = {
-    id: "glass-kiln",
-    title: "유리가마 8주 과정",
-    level: "전문",
-    duration: "8주",
-    sessions: 16,
-    price: "650,000원",
-    description: "유리가마를 활용한 전문적인 유리공예 기법을 배우는 집중 과정입니다.",
-    curriculum: [
-      "가마의 종류와 특성",
-      "온도 제어 및 스케줄링",
-      "슬럼핑 기법",
-      "퓨징 기법",
-      "캐스팅 기법",
-      "몰드 제작 및 활용",
-      "색유리 활용법",
-      "안전 관리 및 작품 완성",
-    ],
+  const fetchCourses = async () => {
+    try {
+      setLoading(true);
+
+      const { data, error } = await supabase
+        .from("classes")
+        .select(
+          `
+          *,
+          instructor:user_profiles!classes_instructor_id_fkey(display_name)
+        `
+        )
+        .eq("category", selectedCourse)
+        .order("sort_order", { ascending: true })
+        .order("created_at", { ascending: true });
+
+      if (error) throw error;
+
+      const coursesWithInstructor =
+        data?.map((classItem) => ({
+          id: classItem.id,
+          title: classItem.title,
+          duration: `${Math.floor(classItem.duration / 60)}시간 ${classItem.duration % 60}분`,
+          price: `${classItem.price.toLocaleString()}원`,
+          description: classItem.description || "",
+          category: classItem.category,
+          max_participants: classItem.max_participants,
+          instructor_name: classItem.instructor?.display_name || "미정",
+          curriculum: classItem.curriculum || [],
+          level: "일반", // 기본값
+          sessions: Math.ceil(classItem.duration / 120), // 2시간당 1세션으로 계산
+          thumbnail_url: classItem.thumbnail_url,
+          image_urls: classItem.image_urls,
+          completion_works: classItem.completion_works,
+          course_focus: classItem.course_focus,
+          learning_objectives: classItem.learning_objectives,
+          post_completion_path: classItem.post_completion_path,
+          detailed_curriculum: classItem.detailed_curriculum,
+        })) || [];
+
+      setCourses(coursesWithInstructor);
+    } catch (error) {
+      console.error("수업 목록 로드 오류:", error);
+      setCourses([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const allCourses = selectedCourse === "stained-glass" ? stainedGlassCourses : [glassKilnCourse];
+  // 자세히 보기 모달 열기
+  const handleViewDetails = (course: Course) => {
+    setViewingCourse(course);
+  };
+
+  // 수강 신청 모달 열기
+  const handleApplyForCourse = (course: Course) => {
+    if (!user) {
+      alert("수강 신청을 위해 로그인이 필요합니다.");
+      navigate("/login");
+      return;
+    }
+
+    setSelectedApplication(course);
+    setApplicationForm({
+      name: profile?.display_name || "",
+      email: user?.email || "",
+      phone: profile?.phone || "",
+      motivation: "",
+      experience: "",
+    });
+    setShowApplicationModal(true);
+  };
+
+  // 수강 신청 제출
+  const handleSubmitApplication = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!selectedApplication || !user) return;
+
+    try {
+      setSubmitting(true);
+
+      // course_applications 테이블에 신청 정보 저장
+      const { error } = await supabase.from("course_applications").insert([
+        {
+          user_id: user.id,
+          course_id: selectedApplication.id,
+          course_title: selectedApplication.title,
+          course_type: selectedCourse,
+          applicant_name: applicationForm.name,
+          applicant_email: applicationForm.email,
+          applicant_phone: applicationForm.phone,
+          motivation: applicationForm.motivation,
+          experience: applicationForm.experience,
+          status: "pending",
+        },
+      ]);
+
+      if (error) throw error;
+
+      alert("수강 신청이 완료되었습니다!");
+      setShowApplicationModal(false);
+      setSelectedApplication(null);
+      setApplicationForm({
+        name: "",
+        email: "",
+        phone: "",
+        motivation: "",
+        experience: "",
+      });
+    } catch (error) {
+      console.error("수강 신청 오류:", error);
+      alert("수강 신청 중 오류가 발생했습니다.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20 lg:pb-8 lg:pl-16">
@@ -150,23 +197,23 @@ const Entrepreneurship: React.FC = () => {
         </div>
 
         {/* 과정 선택 탭 */}
-        <div className="flex justify-center mb-12">
-          <div className="bg-white rounded-lg p-2 shadow-lg">
+        <div className="mb-12">
+          <div className="flex justify-center flex-wrap gap-2">
             <button
-              onClick={() => setSelectedCourse("stained-glass")}
-              className={`px-6 py-3 rounded-lg font-semibold transition-colors ${
-                selectedCourse === "stained-glass"
+              onClick={() => setSelectedCourse("스테인드글라스")}
+              className={`px-4 py-2 rounded-lg font-semibold transition-colors text-sm ${
+                selectedCourse === "스테인드글라스"
                   ? "bg-[#FF7648] text-white"
                   : "text-gray-600 hover:bg-gray-100"
               }`}
             >
-              <IconWrapper icon={FaUserGraduate} className="inline mr-2" />
+              <IconWrapper icon={FaGraduationCap} className="inline mr-2" />
               스테인드글라스
             </button>
             <button
-              onClick={() => setSelectedCourse("glass-kiln")}
-              className={`px-6 py-3 rounded-lg font-semibold transition-colors ${
-                selectedCourse === "glass-kiln"
+              onClick={() => setSelectedCourse("유리가마")}
+              className={`px-4 py-2 rounded-lg font-semibold transition-colors text-sm ${
+                selectedCourse === "유리가마"
                   ? "bg-[#FF7648] text-white"
                   : "text-gray-600 hover:bg-gray-100"
               }`}
@@ -174,36 +221,99 @@ const Entrepreneurship: React.FC = () => {
               <IconWrapper icon={FaFire} className="inline mr-2" />
               유리가마
             </button>
+            <button
+              onClick={() => setSelectedCourse("창업과정")}
+              className={`px-4 py-2 rounded-lg font-semibold transition-colors text-sm ${
+                selectedCourse === "창업과정"
+                  ? "bg-[#FF7648] text-white"
+                  : "text-gray-600 hover:bg-gray-100"
+              }`}
+            >
+              <IconWrapper icon={FaCog} className="inline mr-2" />
+              창업과정
+            </button>
+            <button
+              onClick={() => setSelectedCourse("체험과정")}
+              className={`px-4 py-2 rounded-lg font-semibold transition-colors text-sm ${
+                selectedCourse === "체험과정"
+                  ? "bg-[#FF7648] text-white"
+                  : "text-gray-600 hover:bg-gray-100"
+              }`}
+            >
+              <IconWrapper icon={FaCheckCircle} className="inline mr-2" />
+              체험과정
+            </button>
+            <button
+              onClick={() => setSelectedCourse("키즈클래스")}
+              className={`px-4 py-2 rounded-lg font-semibold transition-colors text-sm ${
+                selectedCourse === "키즈클래스"
+                  ? "bg-[#FF7648] text-white"
+                  : "text-gray-600 hover:bg-gray-100"
+              }`}
+            >
+              <IconWrapper icon={FaUsers} className="inline mr-2" />
+              키즈클래스
+            </button>
+            <button
+              onClick={() => setSelectedCourse("특별과정")}
+              className={`px-4 py-2 rounded-lg font-semibold transition-colors text-sm ${
+                selectedCourse === "특별과정"
+                  ? "bg-[#FF7648] text-white"
+                  : "text-gray-600 hover:bg-gray-100"
+              }`}
+            >
+              <IconWrapper icon={FaCalendarAlt} className="inline mr-2" />
+              특별과정
+            </button>
+            <button
+              onClick={() => setSelectedCourse("워크샵")}
+              className={`px-4 py-2 rounded-lg font-semibold transition-colors text-sm ${
+                selectedCourse === "워크샵"
+                  ? "bg-[#FF7648] text-white"
+                  : "text-gray-600 hover:bg-gray-100"
+              }`}
+            >
+              <IconWrapper icon={FaUserGraduate} className="inline mr-2" />
+              워크샵
+            </button>
           </div>
         </div>
 
-        {/* 과정 로드맵 (스테인드글라스만) */}
-        {selectedCourse === "stained-glass" && (
+        {/* 로딩 상태 */}
+        {loading && (
+          <div className="text-center py-12">
+            <div className="inline-block w-8 h-8 border-4 border-gray-200 border-t-[#FF7648] rounded-full animate-spin"></div>
+            <p className="mt-4 text-gray-600">수업 정보를 불러오는 중...</p>
+          </div>
+        )}
+
+        {/* 빈 상태 */}
+        {!loading && courses.length === 0 && (
+          <div className="text-center py-12">
+            <p className="text-gray-600">해당 카테고리의 수업이 없습니다.</p>
+            <p className="text-gray-500 text-sm mt-2">
+              관리자가 수업을 추가하면 여기에 표시됩니다.
+            </p>
+          </div>
+        )}
+
+        {/* 과정 로드맵 (과정이 있을 때만 표시) */}
+        {!loading && courses.length > 0 && (
           <div className="bg-white rounded-lg shadow-lg p-8 mb-12">
             <h2 className="text-2xl font-bold text-gray-800 mb-8 text-center">
-              스테인드글라스 과정 로드맵
+              {selectedCourse} 과정 안내
             </h2>
             <div className="flex flex-col md:flex-row items-center justify-between">
-              {stainedGlassCourses.map((course, index) => (
+              {courses.map((course, index) => (
                 <React.Fragment key={course.id}>
                   <div className="text-center mb-6 md:mb-0">
-                    <div
-                      className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 ${
-                        course.id === "selective" ? "bg-purple-100" : "bg-blue-100"
-                      }`}
-                    >
-                      <span
-                        className={`font-bold text-xl ${
-                          course.id === "selective" ? "text-purple-600" : "text-blue-600"
-                        }`}
-                      >
-                        {index + 1}
-                      </span>
+                    <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 bg-blue-100">
+                      <span className="font-bold text-xl text-blue-600">{index + 1}</span>
                     </div>
                     <h3 className="font-bold text-gray-800 mb-2">{course.title}</h3>
                     <p className="text-gray-600 text-sm">{course.duration}</p>
                   </div>
-                  {index < stainedGlassCourses.length - 1 && (
+                  {index < courses.length - 1 && (
                     <IconWrapper
                       icon={FaChevronRight}
                       className="text-gray-400 text-2xl hidden md:block"
@@ -216,85 +326,98 @@ const Entrepreneurship: React.FC = () => {
         )}
 
         {/* 과정 상세 정보 */}
-        <div className="grid lg:grid-cols-2 gap-8 mb-12">
-          {allCourses.map((course) => (
-            <div
-              key={course.id}
-              className="bg-white rounded-lg shadow-lg p-8 hover:shadow-xl transition-shadow"
-            >
-              <div className="flex justify-between items-start mb-6">
-                <div>
-                  <h3 className="text-2xl font-bold text-gray-800 mb-2">{course.title}</h3>
-                  <span
-                    className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${
-                      course.id === "selective"
-                        ? "bg-purple-100 text-purple-600"
-                        : course.id === "glass-kiln"
-                        ? "bg-red-100 text-red-600"
-                        : "bg-blue-100 text-blue-600"
-                    }`}
-                  >
-                    {course.level}
-                  </span>
-                </div>
-                <div className="text-right">
-                  <div className="text-2xl font-bold text-[#FF7648]">{course.price}</div>
-                </div>
-              </div>
-
-              <p className="text-gray-600 mb-6">{course.description}</p>
-
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                <div className="flex items-center text-gray-700">
-                  <IconWrapper icon={FaClock} className="text-[#FF7648] mr-2" />
-                  <span className="text-sm">{course.duration}</span>
-                </div>
-                <div className="flex items-center text-gray-700">
-                  <IconWrapper icon={FaUsers} className="text-[#FF7648] mr-2" />
-                  <span className="text-sm">
-                    {course.sessions === 999 ? "맞춤형" : `${course.sessions}회`}
-                  </span>
-                </div>
-              </div>
-
-              {course.prerequisites && (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-6">
-                  <span className="text-yellow-800 text-sm font-semibold">선수조건: </span>
-                  <span className="text-yellow-700 text-sm">{course.prerequisites}</span>
-                </div>
-              )}
-
-              <div className="mb-6">
-                <h4 className="font-bold text-gray-800 mb-3">커리큘럼</h4>
-                <div className="space-y-2">
-                  {course.curriculum.slice(0, 4).map((item, index) => (
-                    <div key={index} className="flex items-center text-gray-700 text-sm">
-                      <IconWrapper
-                        icon={FaCheckCircle}
-                        className="text-green-500 mr-2 flex-shrink-0"
+        {!loading && courses.length > 0 && (
+          <div className="grid lg:grid-cols-2 gap-8 mb-12">
+            {courses.map((course) => (
+              <div
+                key={course.id}
+                className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow"
+              >
+                {/* 썸네일 이미지 */}
+                <div className="h-48 bg-gray-200 relative">
+                  {course.image_urls && course.image_urls.length > 0 && course.image_urls[0] ? (
+                    <div className="relative w-full h-full">
+                      <img
+                        src={course.image_urls[0]}
+                        alt={course.title}
+                        className="w-full h-full object-cover"
                       />
-                      <span>{item}</span>
+                      {course.image_urls.length > 1 && (
+                        <div className="absolute top-4 right-4 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded">
+                          +{course.image_urls.length - 1}
+                        </div>
+                      )}
                     </div>
-                  ))}
-                  {course.curriculum.length > 4 && (
-                    <div className="text-gray-500 text-sm pl-6">
-                      외 {course.curriculum.length - 4}개 과정...
+                  ) : course.thumbnail_url ? (
+                    <img
+                      src={course.thumbnail_url}
+                      alt={course.title}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#FF7648] to-[#E85A2A]">
+                      <IconWrapper icon={FaGraduationCap} className="text-white text-4xl" />
                     </div>
                   )}
+                  <div className="absolute top-4 left-4">
+                    <span className="inline-block px-3 py-1 rounded-full text-sm font-semibold bg-white bg-opacity-90 text-gray-800">
+                      {course.level}
+                    </span>
+                  </div>
+                </div>
+
+                {/* 카드 내용 */}
+                <div className="p-8">
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <h3 className="text-2xl font-bold text-gray-800 mb-2">{course.title}</h3>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-2xl font-bold text-[#FF7648]">{course.price}</div>
+                    </div>
+                  </div>
+
+                  <p className="text-gray-600 mb-6">{course.description}</p>
+
+                  <div className="grid grid-cols-2 gap-4 mb-6">
+                    <div className="flex items-center text-gray-700">
+                      <IconWrapper icon={FaClock} className="text-[#FF7648] mr-2" />
+                      <span className="text-sm">{course.duration}</span>
+                    </div>
+                    <div className="flex items-center text-gray-700">
+                      <IconWrapper icon={FaUsers} className="text-[#FF7648] mr-2" />
+                      <span className="text-sm">최대 {course.max_participants}명</span>
+                    </div>
+                  </div>
+
+                  {course.instructor_name && (
+                    <div className="mb-6">
+                      <div className="flex items-center text-gray-700">
+                        <IconWrapper icon={FaUserGraduate} className="text-[#FF7648] mr-2" />
+                        <span className="text-sm">강사: {course.instructor_name}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => handleApplyForCourse(course)}
+                      className="flex-1 bg-[#FF7648] text-white py-3 rounded-lg hover:bg-[#E85A2A] transition-colors font-semibold"
+                    >
+                      수강 신청
+                    </button>
+                    <button
+                      onClick={() => handleViewDetails(course)}
+                      className="px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      자세히 보기
+                    </button>
+                  </div>
                 </div>
               </div>
-
-              <div className="flex gap-3">
-                <button className="flex-1 bg-[#FF7648] text-white py-3 rounded-lg hover:bg-[#E85A2A] transition-colors font-semibold">
-                  수강 신청
-                </button>
-                <button className="px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-                  자세히 보기
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
 
         {/* 연습실 안내 */}
         <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg p-8 text-white mb-12">
@@ -319,7 +442,7 @@ const Entrepreneurship: React.FC = () => {
             <div className="text-center">
               <Link
                 to="/practice-room-reservation"
-                className="inline-block bg-white text-blue-600 px-8 py-4 rounded-lg font-bold hover:bg-gray-100 transition-colors"
+                className="inline-block bg-white text-blue-600 px-8 py-4 rounded-lg font-bold hover:bg-gray-100 transition-colors flex-row flex items-center justify-center"
               >
                 <IconWrapper icon={FaCalendarAlt} className="mr-2" />
                 연습실 예약하기
@@ -361,6 +484,335 @@ const Entrepreneurship: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* 자세히 보기 모달 */}
+        {viewingCourse && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-2xl font-bold text-gray-800">{viewingCourse.title}</h2>
+                  <button
+                    onClick={() => setViewingCourse(null)}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    <IconWrapper icon={FaTimes} />
+                  </button>
+                </div>
+
+                {/* 썸네일 이미지 */}
+                <div className="mb-6">
+                  <div className="h-64 bg-gray-200 rounded-lg relative overflow-hidden">
+                    {viewingCourse.image_urls &&
+                    viewingCourse.image_urls.length > 0 &&
+                    viewingCourse.image_urls[0] ? (
+                      <img
+                        src={viewingCourse.image_urls[0]}
+                        alt={viewingCourse.title}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : viewingCourse.thumbnail_url ? (
+                      <img
+                        src={viewingCourse.thumbnail_url}
+                        alt={viewingCourse.title}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#FF7648] to-[#E85A2A]">
+                        <IconWrapper icon={FaGraduationCap} className="text-white text-5xl" />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 추가 이미지들 */}
+                  {viewingCourse.image_urls && viewingCourse.image_urls.length > 1 && (
+                    <div className="grid grid-cols-3 gap-2 mt-4">
+                      {viewingCourse.image_urls.slice(1).map((url, index) => (
+                        <img
+                          key={index}
+                          src={url}
+                          alt={`${viewingCourse.title} ${index + 2}`}
+                          className="w-full h-20 object-cover rounded"
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-6">
+                  <div>
+                    <span
+                      className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${
+                        viewingCourse.id === "selective"
+                          ? "bg-purple-100 text-purple-600"
+                          : viewingCourse.id === "glass-kiln"
+                          ? "bg-red-100 text-red-600"
+                          : "bg-blue-100 text-blue-600"
+                      }`}
+                    >
+                      {viewingCourse.level}
+                    </span>
+                    <div className="text-3xl font-bold text-[#FF7648] mt-2">
+                      {viewingCourse.price}
+                    </div>
+                  </div>
+
+                  <p className="text-gray-600">{viewingCourse.description}</p>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex items-center text-gray-700">
+                      <IconWrapper icon={FaClock} className="text-[#FF7648] mr-2" />
+                      <span>{viewingCourse.duration}</span>
+                    </div>
+                    <div className="flex items-center text-gray-700">
+                      <IconWrapper icon={FaUsers} className="text-[#FF7648] mr-2" />
+                      <span>
+                        {viewingCourse.sessions === 999 ? "맞춤형" : `${viewingCourse.sessions}회`}
+                      </span>
+                    </div>
+                  </div>
+
+                  {viewingCourse.prerequisites && (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                      <span className="text-yellow-800 text-sm font-semibold">선수조건: </span>
+                      <span className="text-yellow-700 text-sm">{viewingCourse.prerequisites}</span>
+                    </div>
+                  )}
+
+                  {/* 완성 작품 */}
+                  {viewingCourse.completion_works && (
+                    <div>
+                      <h4 className="font-bold text-gray-800 mb-3">완성 작품 · 수강 포커스</h4>
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <div className="text-sm text-gray-700 whitespace-pre-line">
+                          {viewingCourse.completion_works}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 수업목표 */}
+                  {viewingCourse.learning_objectives && (
+                    <div>
+                      <h4 className="font-bold text-gray-800 mb-3">수업목표</h4>
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                        <div className="text-sm text-gray-700 whitespace-pre-line">
+                          {viewingCourse.learning_objectives}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 이수 후 방향 */}
+                  {viewingCourse.post_completion_path && (
+                    <div>
+                      <h4 className="font-bold text-gray-800 mb-3">이수 후 방향</h4>
+                      <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                        <div className="text-sm text-gray-700 whitespace-pre-line">
+                          {viewingCourse.post_completion_path}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 상세 커리큘럼 (JSONB 데이터) */}
+                  {viewingCourse.detailed_curriculum && (
+                    <div>
+                      <h4 className="font-bold text-gray-800 mb-3">상세 혜택</h4>
+                      <div className="space-y-4">
+                        {Object.entries(viewingCourse.detailed_curriculum).map(([key, value]) => (
+                          <div key={key} className="bg-gray-50 rounded-lg p-4">
+                            <h5 className="font-semibold text-gray-800 mb-2">{key}</h5>
+                            {Array.isArray(value) ? (
+                              <ul className="space-y-1">
+                                {value.map((item, index) => (
+                                  <li
+                                    key={index}
+                                    className="flex items-start text-gray-700 text-sm"
+                                  >
+                                    <IconWrapper
+                                      icon={FaCheckCircle}
+                                      className="text-green-500 mr-2 mt-0.5 flex-shrink-0"
+                                      size={12}
+                                    />
+                                    <span>{String(item)}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : (
+                              <p className="text-gray-700 text-sm">{String(value)}</p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 기본 커리큘럼 (기존 데이터가 있는 경우에만 표시) */}
+                  {viewingCourse.curriculum && viewingCourse.curriculum.length > 0 && (
+                    <div>
+                      <h4 className="font-bold text-gray-800 mb-3">기본 커리큘럼</h4>
+                      <div className="space-y-3">
+                        {viewingCourse.curriculum.map((item, index) => (
+                          <div key={index} className="flex items-start text-gray-700">
+                            <IconWrapper
+                              icon={FaCheckCircle}
+                              className="text-green-500 mr-3 mt-0.5 flex-shrink-0"
+                            />
+                            <div>
+                              <span className="font-medium">{index + 1}주차: </span>
+                              <span>{item}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex gap-3 pt-4">
+                    <button
+                      onClick={() => {
+                        setViewingCourse(null);
+                        handleApplyForCourse(viewingCourse);
+                      }}
+                      className="flex-1 bg-[#FF7648] text-white py-3 rounded-lg hover:bg-[#E85A2A] transition-colors font-semibold"
+                    >
+                      수강 신청하기
+                    </button>
+                    <button
+                      onClick={() => setViewingCourse(null)}
+                      className="px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      닫기
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 수강 신청 모달 */}
+        {showApplicationModal && selectedApplication && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-xl font-bold text-gray-800">수강 신청</h2>
+                  <button
+                    onClick={() => setShowApplicationModal(false)}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    <IconWrapper icon={FaTimes} />
+                  </button>
+                </div>
+
+                <div className="bg-gray-50 p-4 rounded-lg mb-6">
+                  <h3 className="font-bold text-gray-800">{selectedApplication.title}</h3>
+                  <p className="text-gray-600 text-sm">{selectedApplication.description}</p>
+                  <div className="text-[#FF7648] font-bold mt-2">{selectedApplication.price}</div>
+                </div>
+
+                <form onSubmit={handleSubmitApplication} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">이름 *</label>
+                    <input
+                      type="text"
+                      required
+                      value={applicationForm.name}
+                      onChange={(e) =>
+                        setApplicationForm((prev) => ({ ...prev, name: e.target.value }))
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF7648] focus:border-transparent"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">이메일 *</label>
+                    <input
+                      type="email"
+                      required
+                      value={applicationForm.email}
+                      onChange={(e) =>
+                        setApplicationForm((prev) => ({ ...prev, email: e.target.value }))
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF7648] focus:border-transparent"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">연락처 *</label>
+                    <input
+                      type="tel"
+                      required
+                      value={applicationForm.phone}
+                      onChange={(e) =>
+                        setApplicationForm((prev) => ({ ...prev, phone: e.target.value }))
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF7648] focus:border-transparent"
+                      placeholder="010-1234-5678"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      수강 동기 *
+                    </label>
+                    <textarea
+                      required
+                      rows={3}
+                      value={applicationForm.motivation}
+                      onChange={(e) =>
+                        setApplicationForm((prev) => ({ ...prev, motivation: e.target.value }))
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF7648] focus:border-transparent"
+                      placeholder="수강을 희망하는 이유를 간단히 작성해주세요"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      관련 경험
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={applicationForm.experience}
+                      onChange={(e) =>
+                        setApplicationForm((prev) => ({ ...prev, experience: e.target.value }))
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF7648] focus:border-transparent"
+                      placeholder="스테인드글라스 또는 관련 분야 경험이 있다면 작성해주세요 (선택사항)"
+                    />
+                  </div>
+
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                    <p className="text-yellow-800 text-sm">
+                      <IconWrapper icon={FaPhone} className="inline mr-1" />
+                      신청 후 2-3일 내로 연락드려 상세 일정을 안내해드립니다.
+                    </p>
+                  </div>
+
+                  <div className="flex gap-3 pt-4">
+                    <button
+                      type="button"
+                      onClick={() => setShowApplicationModal(false)}
+                      className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      취소
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={submitting}
+                      className="flex-1 bg-[#FF7648] text-white px-4 py-2 rounded-lg hover:bg-[#E85A2A] transition-colors disabled:opacity-50"
+                    >
+                      {submitting ? "신청 중..." : "신청하기"}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

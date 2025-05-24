@@ -14,7 +14,6 @@ import { useMediaQuery } from "react-responsive";
 import Home from "./pages/Home";
 import ClassIntro from "./pages/ClassIntro";
 import Inquiry from "./pages/Inquiry";
-import DynamicInquiry from "./pages/DynamicInquiry";
 import InquiryDetail from "./pages/InquiryDetail";
 import Reservation from "./pages/Reservation";
 import ReservationConfirmation from "./pages/ReservationConfirmation";
@@ -27,13 +26,14 @@ import NotFound from "./pages/NotFound";
 import CustomOrder from "./pages/CustomOrder";
 import Entrepreneurship from "./pages/Entrepreneurship";
 import Exhibition from "./pages/Exhibition";
+import PracticeRoomReservation from "./pages/PracticeRoomReservation";
 
 // MyPage Components
 import MyPageLayout from "./components/mypage/MyPageLayout";
 import ProfilePage from "./pages/mypage/ProfilePage";
 import SettingsPage from "./pages/mypage/SettingsPage";
 import ReservationsPage from "./pages/mypage/ReservationsPage";
-import SessionsPage from "./pages/mypage/SessionsPage";
+import CourseApplicationsPage from "./pages/mypage/CourseApplicationsPage";
 import InquiriesPage from "./pages/mypage/InquiriesPage";
 
 // Admin Pages
@@ -46,6 +46,8 @@ import UserManagement from "./pages/admin/UserManagement";
 import ClassManagement from "./pages/admin/ClassManagement";
 import InquiryManagement from "./pages/admin/InquiryManagement";
 import ReservationManagement from "./pages/admin/ReservationManagement";
+import PortfolioManagement from "./pages/admin/PortfolioManagement";
+import ExhibitionManagement from "./pages/admin/ExhibitionManagement";
 
 // MyPage components
 import MySessions from "./components/mypage/MySessions";
@@ -309,15 +311,6 @@ const AppRoutes = () => {
       />
 
       <Route
-        path="/inquiry/dynamic"
-        element={
-          <ProtectedRoute>
-            <DynamicInquiry />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
         path="/inquiry-detail/:id"
         element={
           <ProtectedRoute>
@@ -383,7 +376,7 @@ const AppRoutes = () => {
         <Route index element={<Navigate to="profile" replace />} />
         <Route path="profile" element={<ProfilePage />} />
         <Route path="reservations" element={<ReservationsPage />} />
-        <Route path="sessions" element={<SessionsPage />} />
+        <Route path="course-applications" element={<CourseApplicationsPage />} />
         <Route path="inquiries" element={<InquiriesPage />} />
         <Route path="settings" element={<SettingsPage />} />
       </Route>
@@ -435,7 +428,7 @@ const AppRoutes = () => {
       />
 
       <Route
-        path="/admin/user-management"
+        path="/admin/users"
         element={
           <ProtectedRoute adminOnly>
             <UserManagement />
@@ -444,7 +437,7 @@ const AppRoutes = () => {
       />
 
       <Route
-        path="/admin/class-management"
+        path="/admin/classes"
         element={
           <ProtectedRoute adminOnly>
             <ClassManagement />
@@ -453,7 +446,7 @@ const AppRoutes = () => {
       />
 
       <Route
-        path="/admin/inquiry-management"
+        path="/admin/inquiries"
         element={
           <ProtectedRoute adminOnly>
             <InquiryManagement />
@@ -466,6 +459,24 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute adminOnly>
             <ReservationManagement />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/portfolio-management"
+        element={
+          <ProtectedRoute adminOnly>
+            <PortfolioManagement />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/exhibitions"
+        element={
+          <ProtectedRoute adminOnly>
+            <ExhibitionManagement />
           </ProtectedRoute>
         }
       />
@@ -494,6 +505,15 @@ const AppRoutes = () => {
         element={
           <PublicRoute>
             <Exhibition />
+          </PublicRoute>
+        }
+      />
+
+      <Route
+        path="/practice-room-reservation"
+        element={
+          <PublicRoute>
+            <PracticeRoomReservation />
           </PublicRoute>
         }
       />

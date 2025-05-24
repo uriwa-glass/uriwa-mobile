@@ -1,13 +1,13 @@
 import React from "react";
-import { useUserStore } from "../../stores/userStore";
+import { useAuth } from "../../contexts/AuthContext";
 import LoadingSpinner from "../common/LoadingSpinner";
 
 const UserProfileDisplay = () => {
-  const { userProfile, currentUser, loading } = useUserStore((state) => state);
+  const { user, profile, loading } = useAuth();
 
   // 멤버십 레벨에 따른 배지 색상
   const membershipBadgeColor = () => {
-    switch (userProfile?.membership_level) {
+    switch (profile?.membership_level) {
       case "VIP":
         return "bg-gradient-to-r from-purple-500 to-indigo-600";
       case "GOLD":
@@ -21,7 +21,7 @@ const UserProfileDisplay = () => {
 
   // 멤버십 레벨 한글화
   const membershipName = () => {
-    switch (userProfile?.membership_level) {
+    switch (profile?.membership_level) {
       case "VIP":
         return "VIP 회원";
       case "GOLD":
@@ -42,7 +42,7 @@ const UserProfileDisplay = () => {
     );
   }
 
-  if (!userProfile || !currentUser) {
+  if (!profile || !user) {
     return (
       <div className="bg-white shadow-xl rounded-lg p-6 md:p-8 text-center">
         <p className="text-gray-600">사용자 정보를 찾을 수 없습니다.</p>
@@ -53,17 +53,17 @@ const UserProfileDisplay = () => {
   return (
     <div className="bg-white shadow-xl rounded-lg overflow-hidden">
       {/* 헤더 섹션 - 아바타와 기본 정보 */}
-      <div className="bg-gradient-to-r from-pink-400 to-rose-500 p-6 pb-12 md:p-8 md:pb-24 relative">
+      <div className="bg-gradient-to-r from-pink-400 to-rose-500 p-6 pb-12 md:p-8 md:pb-16 relative">
         <div className="flex flex-col md:flex-row md:items-center">
           <img
-            src={userProfile.avatar_url || "https://via.placeholder.com/150?text=User"}
-            alt={userProfile.full_name || "프로필 이미지"}
+            src={profile.avatar_url || "https://via.placeholder.com/150?text=User"}
+            alt={profile.full_name || "프로필 이미지"}
             className="w-24 h-24 md:w-32 md:h-32 rounded-full object-cover border-4 border-white shadow-lg"
           />
 
           <div className="mt-4 md:mt-0 md:ml-6 text-white">
-            <h2 className="text-2xl md:text-3xl font-bold">{userProfile.full_name}</h2>
-            <p className="text-pink-100 mt-1">{currentUser.email}</p>
+            <h2 className="text-2xl md:text-3xl font-bold">{profile.full_name}</h2>
+            <p className="text-pink-100 mt-1">{user.email}</p>
             <div className="mt-2">
               <span
                 className={`${membershipBadgeColor()} text-white text-sm rounded-full px-3 py-1 inline-block`}
@@ -76,82 +76,49 @@ const UserProfileDisplay = () => {
       </div>
 
       {/* 정보 카드 섹션 */}
-      <div className="p-6 md:p-8 -mt-8 md:-mt-16 grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="p-6 md:p-8 -mt-8 md:-mt-12 grid grid-cols-1 gap-6">
         {/* 개인 정보 카드 */}
-        <div className="bg-white rounded-lg shadow-lg p-6 transform transition duration-500 hover:shadow-xl hover:-translate-y-1">
+        <div className="bg-white rounded-lg shadow-lg p-6">
           <h3 className="text-lg font-semibold text-gray-800 border-b pb-2 mb-4">개인 정보</h3>
 
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <p className="text-sm font-medium text-gray-500">이름</p>
-              <p className="text-gray-800">{userProfile.full_name || "-"}</p>
+              <p className="text-gray-800">{profile.full_name || "-"}</p>
             </div>
 
             <div>
               <p className="text-sm font-medium text-gray-500">이메일</p>
-              <p className="text-gray-800">{currentUser.email || "-"}</p>
+              <p className="text-gray-800">{user.email || "-"}</p>
             </div>
 
             <div>
               <p className="text-sm font-medium text-gray-500">전화번호</p>
-              <p className="text-gray-800">{userProfile.phone || "-"}</p>
+              <p className="text-gray-800">{profile.phone || "-"}</p>
             </div>
 
             <div>
               <p className="text-sm font-medium text-gray-500">주소</p>
-              <p className="text-gray-800">{userProfile.address || "-"}</p>
+              <p className="text-gray-800">{profile.address || "-"}</p>
             </div>
-          </div>
-        </div>
 
-        {/* 계정 정보 카드 */}
-        <div className="bg-white rounded-lg shadow-lg p-6 transform transition duration-500 hover:shadow-xl hover:-translate-y-1">
-          <h3 className="text-lg font-semibold text-gray-800 border-b pb-2 mb-4">계정 정보</h3>
-
-          <div className="space-y-4">
             <div>
               <p className="text-sm font-medium text-gray-500">회원 등급</p>
-              <div className="flex items-center mt-1">
-                <span
-                  className={`${membershipBadgeColor()} text-white text-sm rounded-full px-3 py-1 inline-block`}
-                >
-                  {membershipName()}
-                </span>
-              </div>
-            </div>
-
-            <div>
-              <p className="text-sm font-medium text-gray-500">계정 역할</p>
-              <p className="capitalize text-gray-800">
-                {userProfile.role === "admin" && "관리자"}
-                {userProfile.role === "instructor" && "강사"}
-                {userProfile.role === "user" && "일반 사용자"}
-              </p>
+              <span
+                className={`${membershipBadgeColor()} text-white text-sm rounded-full px-3 py-1 inline-block`}
+              >
+                {membershipName()}
+              </span>
             </div>
 
             <div>
               <p className="text-sm font-medium text-gray-500">가입일</p>
               <p className="text-gray-800">
-                {new Date(currentUser.created_at).toLocaleDateString("ko-KR", {
+                {new Date(profile.created_at).toLocaleDateString("ko-KR", {
                   year: "numeric",
                   month: "long",
                   day: "numeric",
                 })}
-              </p>
-            </div>
-
-            <div>
-              <p className="text-sm font-medium text-gray-500">마지막 로그인</p>
-              <p className="text-gray-800">
-                {currentUser.last_sign_in_at
-                  ? new Date(currentUser.last_sign_in_at).toLocaleDateString("ko-KR", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })
-                  : "-"}
               </p>
             </div>
           </div>

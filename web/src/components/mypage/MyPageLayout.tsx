@@ -5,12 +5,11 @@ import {
   FiSettings,
   FiClipboard,
   FiMessageSquare,
-  FiBarChart2,
+  FiBook,
   FiChevronLeft,
   FiLogOut,
 } from "react-icons/fi";
 import { IconType } from "react-icons";
-import { useUserStore } from "../../stores/userStore";
 import { useAuth } from "../../contexts/AuthContext";
 import LoadingSpinner from "../common/LoadingSpinner";
 import Icon from "../common/Icon";
@@ -24,8 +23,7 @@ interface NavItem {
 const MyPageLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { userProfile, loading } = useUserStore((state) => state);
-  const { signOut } = useAuth();
+  const { profile, loading, signOut } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -47,8 +45,8 @@ const MyPageLayout = () => {
 
   const navItems: NavItem[] = [
     { path: "/mypage/profile", name: "프로필 관리", icon: FiUser },
+    { path: "/mypage/course-applications", name: "수강신청 내역", icon: FiBook },
     { path: "/mypage/reservations", name: "예약 내역", icon: FiClipboard },
-    { path: "/mypage/sessions", name: "세션 정보", icon: FiBarChart2 },
     { path: "/mypage/inquiries", name: "문의 내역", icon: FiMessageSquare },
     { path: "/mypage/settings", name: "계정 설정", icon: FiSettings },
   ];
@@ -141,25 +139,25 @@ const MyPageLayout = () => {
       <aside
         className={`transform ${
           isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
-        } md:translate-x-0 transition-transform duration-300 ease-in-out w-72 bg-white shadow-lg md:shadow-none fixed md:relative h-full md:h-auto z-20 md:z-auto`}
+        } md:translate-x-0 transition-transform duration-300 ease-in-out w-72 bg-white shadow-lg md:shadow-none pt-[65px] fixed md:relative h-full md:h-auto z-20 md:z-auto`}
       >
         <div className="p-6 h-full overflow-y-auto">
           <div className="mb-10">
             <h2 className="text-2xl font-bold text-gray-800 hidden md:block mb-8">마이페이지</h2>
-            {userProfile && (
+            {profile && (
               <div className="flex items-center space-x-4 mb-8 px-2">
                 <img
-                  src={userProfile.avatar_url || "https://via.placeholder.com/42?text=User"}
+                  src={profile.avatar_url || "https://via.placeholder.com/42?text=User"}
                   alt="프로필"
                   className="w-10 h-10 rounded-full object-cover border border-gray-200"
                 />
                 <div>
-                  <p className="font-medium text-gray-800">{userProfile.full_name}</p>
+                  <p className="font-medium text-gray-800">{profile.full_name}</p>
                   <p className="text-sm text-gray-500">
-                    {userProfile.membership_level === "REGULAR" && "일반회원"}
-                    {userProfile.membership_level === "SILVER" && "실버회원"}
-                    {userProfile.membership_level === "GOLD" && "골드회원"}
-                    {userProfile.membership_level === "VIP" && "VIP회원"}
+                    {profile.membership_level === "REGULAR" && "일반회원"}
+                    {profile.membership_level === "SILVER" && "실버회원"}
+                    {profile.membership_level === "GOLD" && "골드회원"}
+                    {profile.membership_level === "VIP" && "VIP회원"}
                   </p>
                 </div>
               </div>

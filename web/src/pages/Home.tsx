@@ -55,13 +55,15 @@ const Home = () => {
               <div className="h-[100px] bg-[#8E97FD] relative">
                 <div className="absolute top-4 left-4">
                   <h3 className="text-white font-bold text-lg">문의하기</h3>
-                  <p className="text-[#EBEAEC] text-xs">기본 상담 서비스</p>
+                  <p className="text-[#EBEAEC] text-xs">종합 상담 서비스</p>
                 </div>
               </div>
               <div className="p-4 bg-white">
-                <p className="text-[#3F414E] mb-2">간단한 문의 양식을 통해 문의를 접수하세요</p>
+                <p className="text-[#3F414E] mb-2">
+                  통합 문의 양식을 통해 다양한 문의를 접수하세요
+                </p>
                 <div className="flex justify-between items-center">
-                  <span className="text-xs text-[#A1A4B2]">2-5분 소요</span>
+                  <span className="text-xs text-[#A1A4B2]">3-10분 소요</span>
                   <Button
                     variant="outline"
                     size="small"
@@ -69,36 +71,6 @@ const Home = () => {
                     onClick={(e: React.MouseEvent) => {
                       e.stopPropagation();
                       navigate("/inquiry");
-                    }}
-                  >
-                    바로가기
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            {/* 동적 문의 카드 */}
-            <div
-              className="rounded-[10px] overflow-hidden shadow-md cursor-pointer transition-transform hover:scale-[1.02]"
-              onClick={() => navigate("/inquiry/dynamic")}
-            >
-              <div className="h-[100px] bg-[#FFC97E] relative">
-                <div className="absolute top-4 left-4">
-                  <h3 className="text-[#3F414E] font-bold text-lg">동적 문의</h3>
-                  <p className="text-[#524F53] text-xs">고급 상담 서비스</p>
-                </div>
-              </div>
-              <div className="p-4 bg-white">
-                <p className="text-[#3F414E] mb-2">맞춤형 문의 양식으로 상세한 내용을 작성하세요</p>
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-[#A1A4B2]">3-10분 소요</span>
-                  <Button
-                    variant="outline"
-                    size="small"
-                    className="text-[#FFC97E] border-[#FFC97E]"
-                    onClick={(e: React.MouseEvent) => {
-                      e.stopPropagation();
-                      navigate("/inquiry/dynamic");
                     }}
                   >
                     바로가기
@@ -137,7 +109,7 @@ const Home = () => {
               </div>
             </div>
 
-            {/* 정보 조회 카드 */}
+            {/* 내 정보 카드 */}
             <div
               className="rounded-[10px] overflow-hidden shadow-md cursor-pointer transition-transform hover:scale-[1.02]"
               onClick={() => navigate("/mypage")}
@@ -159,6 +131,36 @@ const Home = () => {
                     onClick={(e: React.MouseEvent) => {
                       e.stopPropagation();
                       navigate("/mypage");
+                    }}
+                  >
+                    바로가기
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            {/* 창업과정 카드 */}
+            <div
+              className="rounded-[10px] overflow-hidden shadow-md cursor-pointer transition-transform hover:scale-[1.02]"
+              onClick={() => navigate("/entrepreneurship")}
+            >
+              <div className="h-[100px] bg-[#FFC97E] relative">
+                <div className="absolute top-4 left-4">
+                  <h3 className="text-[#3F414E] font-bold text-lg">창업과정</h3>
+                  <p className="text-[#524F53] text-xs">스테인드글라스 교육</p>
+                </div>
+              </div>
+              <div className="p-4 bg-white">
+                <p className="text-[#3F414E] mb-2">전문 스테인드글라스 창업과정을 확인하세요</p>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-[#A1A4B2]">상시 모집</span>
+                  <Button
+                    variant="outline"
+                    size="small"
+                    className="text-[#FFC97E] border-[#FFC97E]"
+                    onClick={(e: React.MouseEvent) => {
+                      e.stopPropagation();
+                      navigate("/entrepreneurship");
                     }}
                   >
                     바로가기

@@ -61,7 +61,7 @@ const NavigationBar: React.FC = () => {
       icon: <IconWrapper icon={FaHammer} />,
     },
     {
-      label: "창업과정",
+      label: "수업",
       path: "/entrepreneurship",
       icon: <IconWrapper icon={FaGraduationCap} />,
     },
