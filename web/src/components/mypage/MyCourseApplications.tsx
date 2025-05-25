@@ -44,6 +44,20 @@ const MyCourseApplications: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
+  // 영어 course_type을 한국어로 매핑
+  const getCourseTypeName = (courseType: string): string => {
+    const typeMapping: { [key: string]: string } = {
+      "stained-glass": "스테인드글라스",
+      "glass-kiln": "유리가마",
+      entrepreneurship: "창업과정",
+      experience: "체험과정",
+      "kids-class": "키즈클래스",
+      "special-course": "특별과정",
+      workshop: "워크샵",
+    };
+    return typeMapping[courseType] || courseType;
+  };
+
   useEffect(() => {
     if (user) {
       fetchApplications();
@@ -62,7 +76,7 @@ const MyCourseApplications: React.FC = () => {
         .select(
           `
           *,
-          classes:classes!course_applications_course_id_fkey (
+          classes (
             id,
             title,
             description,
@@ -318,7 +332,7 @@ const MyCourseApplications: React.FC = () => {
                                 className="mr-2 text-[#FF7648]"
                                 size={14}
                               />
-                              <span>카테고리: {application.course_type}</span>
+                              <span>카테고리: {getCourseTypeName(application.course_type)}</span>
                             </div>
                             {application.classes?.instructor && (
                               <div className="flex items-center">

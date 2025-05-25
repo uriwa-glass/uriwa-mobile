@@ -58,6 +58,17 @@ const Entrepreneurship: React.FC = () => {
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // 한국어 course_type을 영어로 매핑
+  const courseTypeMapping: { [key: string]: string } = {
+    스테인드글라스: "stained-glass",
+    유리가마: "glass-kiln",
+    창업과정: "entrepreneurship",
+    체험과정: "experience",
+    키즈클래스: "kids-class",
+    특별과정: "special-course",
+    워크샵: "workshop",
+  };
+
   // 수업 데이터 로드
   useEffect(() => {
     fetchCourses();
@@ -145,13 +156,16 @@ const Entrepreneurship: React.FC = () => {
     try {
       setSubmitting(true);
 
+      // 한국어 course_type을 영어로 매핑
+      const mappedCourseType = courseTypeMapping[selectedCourse] || selectedCourse.toLowerCase();
+
       // course_applications 테이블에 신청 정보 저장
       const { error } = await supabase.from("course_applications").insert([
         {
           user_id: user.id,
           course_id: selectedApplication.id,
           course_title: selectedApplication.title,
-          course_type: selectedCourse,
+          course_type: mappedCourseType,
           applicant_name: applicationForm.name,
           applicant_email: applicationForm.email,
           applicant_phone: applicationForm.phone,

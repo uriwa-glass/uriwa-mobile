@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useForm, SubmitHandler } from "react-hook-form";
-import { useUserStore } from "../../stores/userStore";
+import { useAuth } from "../../contexts/AuthContext";
 import { UserProfile } from "../../types/models/user";
 import LoadingSpinner from "../common/LoadingSpinner";
 
@@ -9,9 +9,7 @@ interface ProfileFormInputs extends Pick<UserProfile, "full_name" | "phone" | "a
 }
 
 const UserProfileEditForm = () => {
-  const { userProfile, currentUser, updateUserProfile, uploadAvatar, loading } = useUserStore(
-    (state) => state
-  );
+  const { user, profile, updateProfile, uploadAvatar, loading } = useAuth();
 
   const {
     register,
@@ -21,22 +19,20 @@ const UserProfileEditForm = () => {
     watch,
   } = useForm<ProfileFormInputs>();
 
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(
-    userProfile?.avatar_url || null
-  );
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(profile?.avatar_url || null);
 
   const [avatarUploading, setAvatarUploading] = useState<boolean>(false);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (userProfile) {
-      setValue("full_name", userProfile.full_name);
-      setValue("phone", userProfile.phone || "");
-      setValue("address", userProfile.address || "");
-      setAvatarPreview(userProfile.avatar_url || null);
+    if (profile) {
+      setValue("full_name", profile.full_name);
+      setValue("phone", profile.phone || "");
+      setValue("address", profile.address || "");
+      setAvatarPreview(profile.avatar_url || null);
     }
-  }, [userProfile, setValue]);
+  }, [profile, setValue]);
 
   const avatarFile = watch("avatar_file");
   useEffect(() => {
@@ -61,12 +57,12 @@ const UserProfileEditForm = () => {
         setAvatarPreview(reader.result as string);
       };
       reader.readAsDataURL(file);
-    } else if (userProfile?.avatar_url) {
+    } else if (profile?.avatar_url) {
       // 파일 선택 취소 시 기존 아바타로 복원
-      setAvatarPreview(userProfile.avatar_url);
+      setAvatarPreview(profile.avatar_url);
       setUploadError(null);
     }
-  }, [avatarFile, userProfile?.avatar_url]);
+  }, [avatarFile, profile?.avatar_url]);
 
   // 아바타 업로드 진행 상태를 시뮬레이션하는 함수 (실제로는 업로드 라이브러리에서 제공하는 진행률 이벤트를 사용)
   const simulateProgress = () => {
@@ -84,9 +80,9 @@ const UserProfileEditForm = () => {
   };
 
   const onSubmit: SubmitHandler<ProfileFormInputs> = async (data: ProfileFormInputs) => {
-    if (!currentUser || !userProfile) return;
+    if (!user || !profile) return;
 
-    let newAvatarUrl = userProfile.avatar_url;
+    let newAvatarUrl = profile.avatar_url;
     let progressInterval: NodeJS.Timeout | null = null;
 
     // 아바타 파일 업로드 처리
@@ -108,7 +104,7 @@ const UserProfileEditForm = () => {
       progressInterval = simulateProgress(); // 업로드 진행 상태 시각화 시작
 
       try {
-        const uploadedUrl = await uploadAvatar(currentUser.id, file);
+        const uploadedUrl = await uploadAvatar(file);
         setUploadProgress(100); // 업로드 완료
 
         if (uploadedUrl) {
@@ -133,11 +129,11 @@ const UserProfileEditForm = () => {
       full_name: data.full_name,
       phone: data.phone,
       address: data.address,
-      avatar_url: newAvatarUrl,
+      avatar_url: newAvatarUrl || undefined,
     };
 
     try {
-      await updateUserProfile(currentUser.id, profileUpdateData);
+      await updateProfile(profileUpdateData);
       if (progressInterval) clearInterval(progressInterval); // 진행 상태 시각화 중지
       setAvatarUploading(false);
       alert("프로필이 성공적으로 업데이트되었습니다.");
@@ -149,7 +145,7 @@ const UserProfileEditForm = () => {
     }
   };
 
-  if (!userProfile) {
+  if (!profile) {
     return (
       <div className="flex flex-col items-center p-6">
         <LoadingSpinner size="lg" />

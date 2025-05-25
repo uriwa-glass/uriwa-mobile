@@ -47,3 +47,7 @@ supabase/.temp/
 
 # Supabase configuration with sensitive information
 supabase/config.toml 
+
+.cursorrules
+.taskmasterconfig
+.windsurfrules

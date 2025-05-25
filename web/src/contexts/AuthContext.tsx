@@ -19,6 +19,7 @@ export interface AuthContextType {
   signUp: (email: string, password: string, metadata?: any) => Promise<void>;
   signOut: () => Promise<void>;
   updateProfile: (data: Partial<UserProfile>) => Promise<void>;
+  uploadAvatar: (file: File) => Promise<string | null>;
   signInWithKakao: () => Promise<void>;
   signInWithKakaoUser: (kakaoUserInfo: KakaoUserInfo) => Promise<void>;
 }
@@ -37,6 +38,7 @@ const AuthContext = createContext<AuthContextType>({
   signUp: async () => {},
   signOut: async () => {},
   updateProfile: async () => {},
+  uploadAvatar: async () => null,
   signInWithKakao: async () => {},
   signInWithKakaoUser: async () => {},
 });
@@ -354,6 +356,43 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  // 아바타 업로드
+  const uploadAvatar = async (file: File): Promise<string | null> => {
+    try {
+      if (!user) {
+        throw new Error("로그인 상태가 아닐 때 아바타를 업로드할 수 없습니다");
+      }
+
+      setLoading(true);
+      console.log(`아바타 업로드 중: ${user.id}`);
+
+      const fileExt = file.name.split(".").pop();
+      const fileName = `avatar-${Date.now()}.${fileExt}`;
+      const filePath = `${user.id}/${fileName}`; // 사용자 ID 폴더 하위에 저장
+
+      // user-avatars bucket에 업로드 시도
+      const { error: uploadError } = await supabase.storage
+        .from("user-avatars")
+        .upload(filePath, file);
+
+      if (uploadError) {
+        console.error("아바타 업로드 오류:", uploadError);
+        throw uploadError;
+      }
+
+      const { data: publicUrlData } = supabase.storage.from("user-avatars").getPublicUrl(filePath);
+
+      console.log("아바타 업로드 성공:", publicUrlData.publicUrl);
+      return publicUrlData.publicUrl;
+    } catch (err) {
+      console.error("아바타 업로드 실패:", err);
+      setError(err instanceof Error ? err : new Error("아바타 업로드 중 오류가 발생했습니다"));
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // 카카오 로그인
   const signInWithKakao = async () => {
     try {
@@ -529,6 +568,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     signUp,
     signOut,
     updateProfile,
+    uploadAvatar,
     signInWithKakao,
     signInWithKakaoUser,
   };

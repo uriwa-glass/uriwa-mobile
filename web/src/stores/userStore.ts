@@ -86,7 +86,7 @@ export const useUserStore = create<UserStore>()(
           const { data, error } = await supabase
             .from("user_profiles")
             .select("*")
-            .eq("id", userId)
+            .eq("user_id", userId)
             .single();
           if (error) throw error;
           set({ userProfile: data as UserProfile, loading: false });
@@ -111,7 +111,7 @@ export const useUserStore = create<UserStore>()(
           const { data, error } = await supabase
             .from("user_profiles")
             .update(profileData)
-            .eq("id", userId)
+            .eq("user_id", userId)
             .select()
             .single();
           if (error) throw error;
