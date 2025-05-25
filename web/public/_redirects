@@ -1,0 +1,18 @@
+# Netlify SPA 라우팅 설정
+# 모든 경로를 index.html로 리다이렉트하되, 존재하는 파일은 제외
+
+# API 라우트 등 특별한 처리가 필요한 경우
+/api/*  /api/:splat  200
+
+# 정적 파일들은 그대로 서브
+/*.js   /:splat  200
+/*.css  /:splat  200
+/*.png  /:splat  200
+/*.jpg  /:splat  200
+/*.ico  /:splat  200
+/*.svg  /:splat  200
+/*.woff /:splat  200
+/*.woff2 /:splat  200
+
+# OAuth 콜백 등 모든 다른 경로는 index.html로 리다이렉트
+/*    /index.html   200 
